@@ -13,6 +13,11 @@ const router = createRouter({
       name: 'image-processing',
       component: () => import('@/pages/ImageProcessing.vue'),
     },
+    {
+      path: '/unix-timestamp',
+      name: 'unix-timestamp',
+      component: () => import('@/pages/UnixTimestamp.vue'),
+    },
   ],
 })
 
