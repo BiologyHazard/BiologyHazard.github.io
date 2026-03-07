@@ -20,7 +20,7 @@ type ImageItem = {
 
 const imageItems = ref<ImageItem[]>([])
 
-const qualityPercent = ref<number>(80)
+const qualityPercent = ref<number>(50)
 const targetWidth = ref<number>(0)
 const targetHeight = ref<number>(0)
 
@@ -223,6 +223,14 @@ function downloadWebp(item: ImageItem): void {
   anchor.click()
 }
 
+async function downloadAll(): Promise<void> {
+  const readyItems = imageItems.value.filter((item) => item.result)
+  for (const item of readyItems) {
+    downloadWebp(item)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+}
+
 onBeforeUnmount(() => {
   clearAllItems()
 })
@@ -297,6 +305,15 @@ onBeforeUnmount(() => {
                   @click="compressToWebp"
                 >
                   {{ isCompressing ? '批量压缩中...' : '开始批量压缩' }}
+                </UButton>
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-download"
+                  :disabled="!processedCount"
+                  @click="downloadAll"
+                >
+                  一键下载全部 ({{ processedCount }})
                 </UButton>
               </div>
 
