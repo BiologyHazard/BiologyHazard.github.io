@@ -11,26 +11,14 @@ const items = computed(() => [
     to: '/image-processing',
   },
 ])
-
-// nuxtApp.hooks.hookOnce('page:finish', () => {
-//   updateHeadings(
-//     [
-//       document.querySelector('#features'),
-//       document.querySelector('#pricing'),
-//       document.querySelector('#testimonials'),
-//     ].filter(Boolean) as Element[],
-//   )
-// })
 </script>
 
 <template>
   <UHeader>
     <template #left>
-      <NuxtLink to="/">
-        <AppLogo class="w-auto h-6 shrink-0" />
-      </NuxtLink>
-
-      <TemplateMenu />
+      <RouterLink to="/">
+        <img alt="Logo" class="h-6 w-auto shrink-0" src="@/assets/images/白鸥.webp" />
+      </RouterLink>
     </template>
 
     <UNavigationMenu :items="items" variant="link" class="hidden lg:block" />

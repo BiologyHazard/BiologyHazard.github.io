@@ -1,35 +1,56 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 
-type CompressResult = {
+type ImageResult = {
   blob: Blob
   url: string
   width: number
   height: number
 }
 
-const sourceFile = ref<File | null>(null)
-const sourceImageUrl = ref<string>('')
-const sourceWidth = ref<number>(0)
-const sourceHeight = ref<number>(0)
+type ImageItem = {
+  id: string
+  file: File
+  sourceUrl: string
+  sourceWidth: number
+  sourceHeight: number
+  result: ImageResult | null
+  error: string
+}
+
+const imageItems = ref<ImageItem[]>([])
 
 const qualityPercent = ref<number>(80)
 const targetWidth = ref<number>(0)
 const targetHeight = ref<number>(0)
 
-const result = ref<CompressResult | null>(null)
 const isCompressing = ref<boolean>(false)
 const errorMessage = ref<string>('')
+const progressText = ref<string>('')
 
 const quality = computed(() => Math.min(1, Math.max(0.1, qualityPercent.value / 100)))
 
-const sourceSizeText = computed(() => formatBytes(sourceFile.value?.size ?? 0))
-const resultSizeText = computed(() => formatBytes(result.value?.blob.size ?? 0))
-const ratioText = computed(() => {
-  if (!sourceFile.value || !result.value) return '-'
-  const ratio = (result.value.blob.size / sourceFile.value.size) * 100
-  return `${ratio.toFixed(1)}%`
+const totalSourceSizeText = computed(() => {
+  const total = imageItems.value.reduce((sum, item) => sum + item.file.size, 0)
+  return formatBytes(total)
 })
+const totalResultSizeText = computed(() => {
+  const total = imageItems.value.reduce((sum, item) => sum + (item.result?.blob.size ?? 0), 0)
+  return formatBytes(total)
+})
+const totalRatioText = computed(() => {
+  const sourceTotal = imageItems.value.reduce((sum, item) => sum + item.file.size, 0)
+  const resultTotal = imageItems.value.reduce((sum, item) => sum + (item.result?.blob.size ?? 0), 0)
+  if (!sourceTotal || !resultTotal) return '-'
+  return `${((resultTotal / sourceTotal) * 100).toFixed(1)}%`
+})
+const processedCount = computed(() => imageItems.value.filter((item) => item.result).length)
+const validImageCount = computed(() => imageItems.value.length)
+
+function getItemRatio(item: ImageItem): string {
+  if (!item.result) return '-'
+  return `${((item.result.blob.size / item.file.size) * 100).toFixed(1)}%`
+}
 
 function formatBytes(bytes: number): string {
   if (!bytes) return '0 B'
@@ -67,95 +88,124 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-function cleanupResult(): void {
-  if (result.value?.url) {
-    revokeUrl(result.value.url)
+function clearAllItems(): void {
+  for (const item of imageItems.value) {
+    revokeUrl(item.sourceUrl)
+    if (item.result?.url) {
+      revokeUrl(item.result.url)
+    }
   }
-  result.value = null
+  imageItems.value = []
 }
 
-async function handleFileChange(event: Event): Promise<void> {
+async function handleFileUpdate(files: File[] | null | undefined): Promise<void> {
   errorMessage.value = ''
-  cleanupResult()
+  progressText.value = ''
+  clearAllItems()
 
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
+  const fileList = files ?? []
+  if (!fileList.length) return
 
-  if (!file.type.startsWith('image/')) {
+  const invalidCount = fileList.filter((file) => !file.type.startsWith('image/')).length
+  if (invalidCount === fileList.length) {
     errorMessage.value = '请选择图片文件。'
-    input.value = ''
     return
   }
 
-  sourceFile.value = file
-
-  if (sourceImageUrl.value) {
-    revokeUrl(sourceImageUrl.value)
+  if (invalidCount > 0) {
+    errorMessage.value = `已忽略 ${invalidCount} 个非图片文件。`
   }
-  sourceImageUrl.value = URL.createObjectURL(file)
 
-  try {
-    const size = await getImageSize(file)
-    sourceWidth.value = size.width
-    sourceHeight.value = size.height
-    targetWidth.value = size.width
-    targetHeight.value = size.height
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '读取图片尺寸失败。'
+  const validFiles = fileList.filter((file) => file.type.startsWith('image/'))
+  const items: ImageItem[] = []
+
+  for (const file of validFiles) {
+    const sourceUrl = URL.createObjectURL(file)
+    try {
+      const size = await getImageSize(file)
+      items.push({
+        id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
+        file,
+        sourceUrl,
+        sourceWidth: size.width,
+        sourceHeight: size.height,
+        result: null,
+        error: '',
+      })
+    } catch (error) {
+      revokeUrl(sourceUrl)
+      const message = error instanceof Error ? error.message : '读取图片尺寸失败。'
+      errorMessage.value = message
+    }
+  }
+
+  imageItems.value = items
+}
+
+async function compressItem(item: ImageItem): Promise<void> {
+  const outputWidth = Math.max(1, Math.floor(targetWidth.value || item.sourceWidth))
+  const outputHeight = Math.max(1, Math.floor(targetHeight.value || item.sourceHeight))
+
+  const image = await loadImage(item.sourceUrl)
+  const canvas = document.createElement('canvas')
+  canvas.width = outputWidth
+  canvas.height = outputHeight
+
+  const context = canvas.getContext('2d')
+  if (!context) {
+    throw new Error('浏览器不支持 Canvas 压缩。')
+  }
+
+  context.drawImage(image, 0, 0, outputWidth, outputHeight)
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (generatedBlob) => {
+        if (!generatedBlob) {
+          reject(new Error('WebP 编码失败，请尝试调整参数后重试。'))
+          return
+        }
+        resolve(generatedBlob)
+      },
+      'image/webp',
+      quality.value,
+    )
+  })
+
+  if (item.result?.url) {
+    revokeUrl(item.result.url)
+  }
+  item.result = {
+    blob,
+    url: URL.createObjectURL(blob),
+    width: outputWidth,
+    height: outputHeight,
   }
 }
 
 async function compressToWebp(): Promise<void> {
   errorMessage.value = ''
-  cleanupResult()
+  progressText.value = ''
 
-  if (!sourceFile.value) {
-    errorMessage.value = '请先上传一张图片。'
+  if (!imageItems.value.length) {
+    errorMessage.value = '请先上传至少一张图片。'
     return
   }
 
-  const outputWidth = Math.max(1, Math.floor(targetWidth.value || sourceWidth.value))
-  const outputHeight = Math.max(1, Math.floor(targetHeight.value || sourceHeight.value))
-
   isCompressing.value = true
   try {
-    const sourceUrl = URL.createObjectURL(sourceFile.value)
-    const image = await loadImage(sourceUrl)
-    revokeUrl(sourceUrl)
-
-    const canvas = document.createElement('canvas')
-    canvas.width = outputWidth
-    canvas.height = outputHeight
-
-    const context = canvas.getContext('2d')
-    if (!context) {
-      throw new Error('浏览器不支持 Canvas 压缩。')
+    let index = 0
+    for (const item of imageItems.value) {
+      item.error = ''
+      progressText.value = `正在处理 ${index + 1}/${imageItems.value.length}：${item.file.name}`
+      try {
+        await compressItem(item)
+      } catch (error) {
+        item.error = error instanceof Error ? error.message : '压缩失败，请重试。'
+      }
+      index += 1
     }
-
-    context.drawImage(image, 0, 0, outputWidth, outputHeight)
-
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (generatedBlob) => {
-          if (!generatedBlob) {
-            reject(new Error('WebP 编码失败，请尝试调整参数后重试。'))
-            return
-          }
-          resolve(generatedBlob)
-        },
-        'image/webp',
-        quality.value,
-      )
-    })
-
-    const url = URL.createObjectURL(blob)
-    result.value = {
-      blob,
-      url,
-      width: outputWidth,
-      height: outputHeight,
-    }
+    progressText.value = `处理完成：${processedCount.value}/${imageItems.value.length}`
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '压缩失败，请重试。'
   } finally {
@@ -163,23 +213,18 @@ async function compressToWebp(): Promise<void> {
   }
 }
 
-function downloadWebp(): void {
-  if (!result.value || !sourceFile.value) return
+function downloadWebp(item: ImageItem): void {
+  if (!item.result) return
 
-  const filenameWithoutExt = sourceFile.value.name.replace(/\.[^.]+$/, '')
+  const filenameWithoutExt = item.file.name.replace(/\.[^.]+$/, '')
   const anchor = document.createElement('a')
-  anchor.href = result.value.url
+  anchor.href = item.result.url
   anchor.download = `${filenameWithoutExt || 'compressed'}.webp`
   anchor.click()
 }
 
 onBeforeUnmount(() => {
-  if (sourceImageUrl.value) {
-    revokeUrl(sourceImageUrl.value)
-  }
-  if (result.value?.url) {
-    revokeUrl(result.value.url)
-  }
+  clearAllItems()
 })
 </script>
 
@@ -197,51 +242,49 @@ onBeforeUnmount(() => {
           <UCard>
             <div class="space-y-4">
               <!-- 文件选择 -->
-              <div>
-                <label class="mb-2 block text-sm font-medium">选择图片</label>
-                <UInput type="file" accept="image/*" @change="handleFileChange" />
-              </div>
+              <UFormField label="选择图片">
+                <UFileUpload
+                  multiple
+                  highlight
+                  layout="list"
+                  accept="image/*"
+                  icon="i-lucide-image"
+                  label="拖拽图片到此处，或点击选择"
+                  class="min-h-36 w-full"
+                  description="支持 SVG、PNG、JPG、GIF、WebP 等图片格式"
+                  @update:model-value="handleFileUpdate"
+                />
+              </UFormField>
 
               <!-- 质量滑块 -->
-              <div>
-                <div class="mb-2 flex items-center justify-between">
-                  <label class="text-sm font-medium">质量</label>
-                  <span class="text-sm font-semibold text-primary">{{ qualityPercent }}%</span>
-                </div>
-                <USlider
-                  v-model="qualityPercent"
-                  :min="10"
-                  :max="100"
-                  :step="1"
-                  :tooltip="{ disableClosingTrigger: true }"
-                />
-              </div>
+              <UFormField label="质量">
+                <template #hint>
+                  <span class="text-sm font-semibold text-primary">{{ qualityPercent }}</span>
+                </template>
+                <USlider v-model="qualityPercent" :min="0" :step="1" :max="100" />
+              </UFormField>
 
               <!-- 输出尺寸 -->
-              <div>
-                <label class="mb-2 block text-sm font-medium">输出尺寸</label>
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="mb-1 block text-xs text-muted">宽度 (px)</label>
-                    <UInputNumber v-model="targetWidth" :min="1" placeholder="宽度" />
-                  </div>
-                  <div>
-                    <label class="mb-1 block text-xs text-muted">高度 (px)</label>
-                    <UInputNumber v-model="targetHeight" :min="1" placeholder="高度" />
-                  </div>
-                </div>
+              <div class="grid grid-cols-2 gap-4">
+                <UFormField label="宽度（px）">
+                  <UInputNumber v-model="targetWidth" :min="1" />
+                </UFormField>
+                <UFormField label="高度（px）">
+                  <UInputNumber v-model="targetHeight" :min="1" />
+                </UFormField>
               </div>
 
               <!-- 原始信息 -->
               <UCard variant="soft">
                 <div class="space-y-1 text-sm">
                   <p class="text-muted">
-                    原始尺寸：<span class="font-semibold"
-                      >{{ sourceWidth || '-' }} × {{ sourceHeight || '-' }}</span
-                    >
+                    已选图片：<span class="font-semibold">{{ validImageCount }}</span>
                   </p>
                   <p class="text-muted">
-                    原始大小：<span class="font-semibold">{{ sourceSizeText }}</span>
+                    原始总大小：<span class="font-semibold">{{ totalSourceSizeText }}</span>
+                  </p>
+                  <p v-if="progressText" class="text-muted">
+                    处理进度：<span class="font-semibold">{{ progressText }}</span>
                   </p>
                 </div>
               </UCard>
@@ -249,19 +292,11 @@ onBeforeUnmount(() => {
               <!-- 操作按钮 -->
               <div class="flex flex-wrap gap-3">
                 <UButton
-                  :disabled="!sourceFile || isCompressing"
                   :loading="isCompressing"
+                  :disabled="!imageItems.length || isCompressing"
                   @click="compressToWebp"
                 >
-                  {{ isCompressing ? '压缩中...' : '开始压缩' }}
-                </UButton>
-                <UButton
-                  color="neutral"
-                  variant="outline"
-                  :disabled="!result"
-                  @click="downloadWebp"
-                >
-                  下载 WebP
+                  {{ isCompressing ? '批量压缩中...' : '开始批量压缩' }}
                 </UButton>
               </div>
 
@@ -278,52 +313,100 @@ onBeforeUnmount(() => {
           <!-- 预览与结果卡片 -->
           <UCard>
             <div class="space-y-4">
-              <!-- 图片预览 -->
-              <div class="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p class="mb-2 text-sm font-medium">原图</p>
-                  <div
-                    class="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-default bg-muted/20"
-                  >
-                    <img
-                      v-if="sourceImageUrl"
-                      :src="sourceImageUrl"
-                      alt="原图预览"
-                      class="h-full w-full object-contain"
-                    />
-                    <span v-else class="text-sm text-muted">未上传</span>
-                  </div>
-                </div>
+              <div v-if="imageItems.length" class="grid gap-4 md:grid-cols-2">
+                <UCard v-for="item in imageItems" :key="item.id" variant="subtle">
+                  <div class="space-y-3">
+                    <p class="truncate text-sm font-medium">{{ item.file.name }}</p>
 
-                <div>
-                  <p class="mb-2 text-sm font-medium">WebP</p>
-                  <div
-                    class="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-default bg-muted/20"
-                  >
-                    <img
-                      v-if="result?.url"
-                      :src="result.url"
-                      alt="压缩结果预览"
-                      class="h-full w-full object-contain"
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <div
+                        class="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-default bg-muted/20"
+                      >
+                        <img
+                          alt="原图预览"
+                          :src="item.sourceUrl"
+                          class="h-full w-full object-contain"
+                        />
+                      </div>
+                      <div
+                        class="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-default bg-muted/20"
+                      >
+                        <img
+                          v-if="item.result?.url"
+                          alt="压缩结果预览"
+                          :src="item.result.url"
+                          class="h-full w-full object-contain"
+                        />
+                        <span v-else class="text-sm text-muted">未生成</span>
+                      </div>
+                    </div>
+
+                    <div class="space-y-1 text-sm text-muted">
+                      <p>
+                        原始尺寸：<span class="font-semibold"
+                          >{{ item.sourceWidth }} × {{ item.sourceHeight }}</span
+                        >
+                      </p>
+                      <p>
+                        原始大小：<span class="font-semibold">{{
+                          formatBytes(item.file.size)
+                        }}</span>
+                      </p>
+                      <p>
+                        输出尺寸：<span class="font-semibold"
+                          >{{ item.result?.width || '-' }} × {{ item.result?.height || '-' }}</span
+                        >
+                      </p>
+                      <p>
+                        输出大小：<span class="font-semibold">{{
+                          item.result ? formatBytes(item.result.blob.size) : '-'
+                        }}</span>
+                      </p>
+                      <p>
+                        体积占比：<span class="font-semibold">{{ getItemRatio(item) }}</span>
+                      </p>
+                    </div>
+
+                    <UAlert
+                      v-if="item.error"
+                      color="error"
+                      variant="soft"
+                      :description="item.error"
                     />
-                    <span v-else class="text-sm text-muted">未生成</span>
+
+                    <UButton
+                      size="sm"
+                      color="neutral"
+                      variant="outline"
+                      :disabled="!item.result"
+                      @click="downloadWebp(item)"
+                    >
+                      下载该图 WebP
+                    </UButton>
                   </div>
-                </div>
+                </UCard>
               </div>
+
+              <UAlert
+                v-else
+                variant="soft"
+                color="neutral"
+                description="请先选择一张或多张图片进行预览和压缩。"
+              />
 
               <!-- 输出信息 -->
               <UCard variant="soft">
                 <div class="space-y-1 text-sm">
                   <p class="text-muted">
-                    输出尺寸：<span class="font-semibold"
-                      >{{ result?.width || '-' }} × {{ result?.height || '-' }}</span
+                    已压缩数量：<span class="font-semibold"
+                      >{{ processedCount }} / {{ validImageCount }}</span
                     >
                   </p>
                   <p class="text-muted">
-                    输出大小：<span class="font-semibold">{{ resultSizeText }}</span>
+                    输出总大小：<span class="font-semibold">{{ totalResultSizeText }}</span>
                   </p>
                   <p class="text-muted">
-                    体积占比：<span class="font-semibold">{{ ratioText }}</span>
+                    总体积占比：<span class="font-semibold">{{ totalRatioText }}</span>
                   </p>
                 </div>
               </UCard>
