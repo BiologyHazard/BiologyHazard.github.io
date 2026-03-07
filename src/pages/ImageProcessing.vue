@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
+import AppImagePreview from '@/components/AppImagePreview.vue'
+import type { PreviewTarget } from '@/composables/useImagePreview'
 
 type ImageResult = {
   blob: Blob
@@ -183,6 +185,19 @@ async function compressItem(item: ImageItem): Promise<void> {
   }
 }
 
+async function runWithConcurrencyLimit<T>(
+  tasks: (() => Promise<T>)[],
+  limit: number,
+): Promise<void> {
+  const queue = [...tasks]
+  async function worker() {
+    while (queue.length) {
+      await queue.shift()!()
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker))
+}
+
 async function compressToWebp(): Promise<void> {
   errorMessage.value = ''
   progressText.value = ''
@@ -193,19 +208,24 @@ async function compressToWebp(): Promise<void> {
   }
 
   isCompressing.value = true
+  let doneCount = 0
+  const total = imageItems.value.length
+  progressText.value = `正在处理 0/${total}…`
   try {
-    let index = 0
-    for (const item of imageItems.value) {
-      item.error = ''
-      progressText.value = `正在处理 ${index + 1}/${imageItems.value.length}：${item.file.name}`
-      try {
-        await compressItem(item)
-      } catch (error) {
-        item.error = error instanceof Error ? error.message : '压缩失败，请重试。'
-      }
-      index += 1
-    }
-    progressText.value = `处理完成：${processedCount.value}/${imageItems.value.length}`
+    await runWithConcurrencyLimit(
+      imageItems.value.map((item) => async () => {
+        item.error = ''
+        try {
+          await compressItem(item)
+        } catch (error) {
+          item.error = error instanceof Error ? error.message : '压缩失败，请重试。'
+        }
+        doneCount += 1
+        progressText.value = `正在处理 ${doneCount}/${total}…`
+      }),
+      8,
+    )
+    progressText.value = `处理完成：${processedCount.value}/${total}`
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '压缩失败，请重试。'
   } finally {
@@ -215,7 +235,6 @@ async function compressToWebp(): Promise<void> {
 
 function downloadWebp(item: ImageItem): void {
   if (!item.result) return
-
   const filenameWithoutExt = item.file.name.replace(/\.[^.]+$/, '')
   const anchor = document.createElement('a')
   anchor.href = item.result.url
@@ -234,6 +253,12 @@ async function downloadAll(): Promise<void> {
 onBeforeUnmount(() => {
   clearAllItems()
 })
+
+const imagePreviewRef = ref<InstanceType<typeof AppImagePreview>>()
+
+function openPreview(target: PreviewTarget) {
+  imagePreviewRef.value?.open(target)
+}
 </script>
 
 <template>
@@ -249,7 +274,6 @@ onBeforeUnmount(() => {
           <!-- 参数设置卡片 -->
           <UCard>
             <div class="space-y-4">
-              <!-- 文件选择 -->
               <UFormField label="选择图片">
                 <UFileUpload
                   multiple
@@ -264,7 +288,6 @@ onBeforeUnmount(() => {
                 />
               </UFormField>
 
-              <!-- 质量滑块 -->
               <UFormField label="质量">
                 <template #hint>
                   <span class="text-sm font-semibold text-primary">{{ qualityPercent }}</span>
@@ -272,7 +295,6 @@ onBeforeUnmount(() => {
                 <USlider v-model="qualityPercent" :min="0" :step="1" :max="100" />
               </UFormField>
 
-              <!-- 输出尺寸 -->
               <div class="grid grid-cols-2 gap-4">
                 <UFormField label="宽度（px）">
                   <UInputNumber v-model="targetWidth" :min="1" />
@@ -282,7 +304,6 @@ onBeforeUnmount(() => {
                 </UFormField>
               </div>
 
-              <!-- 原始信息 -->
               <UCard variant="soft">
                 <div class="space-y-1 text-sm">
                   <p class="text-muted">
@@ -297,7 +318,6 @@ onBeforeUnmount(() => {
                 </div>
               </UCard>
 
-              <!-- 操作按钮 -->
               <div class="flex flex-wrap gap-3">
                 <UButton
                   :loading="isCompressing"
@@ -317,7 +337,6 @@ onBeforeUnmount(() => {
                 </UButton>
               </div>
 
-              <!-- 错误提示 -->
               <UAlert
                 v-if="errorMessage"
                 color="error"
@@ -336,25 +355,55 @@ onBeforeUnmount(() => {
                     <p class="truncate text-sm font-medium">{{ item.file.name }}</p>
 
                     <div class="grid gap-3 sm:grid-cols-2">
+                      <!-- 原图缩略图 -->
                       <div
-                        class="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-default bg-muted/20"
+                        class="group relative flex aspect-square cursor-zoom-in items-center justify-center overflow-hidden rounded-md border border-default bg-muted/20"
+                        @click="
+                          openPreview({
+                            url: item.sourceUrl,
+                            name: item.file.name,
+                            downloadName: item.file.name,
+                          })
+                        "
                       >
                         <img
                           alt="原图预览"
                           :src="item.sourceUrl"
-                          class="h-full w-full object-contain"
+                          class="h-full w-full object-contain transition-opacity group-hover:opacity-30"
                         />
+                        <div
+                          class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
+                        >
+                          <UIcon name="i-lucide-zoom-in" class="size-8 drop-shadow-md" />
+                        </div>
                       </div>
+
+                      <!-- 压缩结果缩略图 -->
                       <div
-                        class="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-default bg-muted/20"
+                        :class="item.result?.url ? 'cursor-zoom-in' : ''"
+                        class="group relative flex aspect-square items-center justify-center overflow-hidden rounded-md border border-default bg-muted/20"
+                        @click="
+                          item.result?.url &&
+                          openPreview({
+                            url: item.result.url,
+                            name: item.file.name,
+                            downloadName: item.file.name.replace(/\.[^.]+$/, '') + '.webp',
+                          })
+                        "
                       >
                         <img
                           v-if="item.result?.url"
                           alt="压缩结果预览"
                           :src="item.result.url"
-                          class="h-full w-full object-contain"
+                          class="h-full w-full object-contain transition-opacity group-hover:opacity-30"
                         />
                         <span v-else class="text-sm text-muted">未生成</span>
+                        <div
+                          v-if="item.result?.url"
+                          class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
+                        >
+                          <UIcon name="i-lucide-zoom-in" class="size-8 drop-shadow-md" />
+                        </div>
                       </div>
                     </div>
 
@@ -411,7 +460,6 @@ onBeforeUnmount(() => {
                 description="请先选择一张或多张图片进行预览和压缩。"
               />
 
-              <!-- 输出信息 -->
               <UCard variant="soft">
                 <div class="space-y-1 text-sm">
                   <p class="text-muted">
@@ -432,5 +480,7 @@ onBeforeUnmount(() => {
         </div>
       </UPageBody>
     </UPage>
+
+    <AppImagePreview ref="imagePreviewRef" />
   </section>
 </template>
