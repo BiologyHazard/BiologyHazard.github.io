@@ -262,7 +262,7 @@ function openPreview(target: PreviewTarget) {
 </script>
 
 <template>
-  <section class="mx-auto w-full max-w-6xl space-y-6">
+  <UContainer>
     <UPage>
       <UPageHeader
         title="图片压缩为 WebP"
@@ -272,7 +272,7 @@ function openPreview(target: PreviewTarget) {
       <UPageBody>
         <div class="grid gap-6 lg:grid-cols-2">
           <!-- 参数设置卡片 -->
-          <UCard>
+          <div>
             <div class="space-y-4">
               <UFormField label="选择图片">
                 <UFileUpload
@@ -297,22 +297,22 @@ function openPreview(target: PreviewTarget) {
 
               <div class="grid grid-cols-2 gap-4">
                 <UFormField label="宽度（px）">
-                  <UInputNumber v-model="targetWidth" :min="1" />
+                  <UInputNumber v-model="targetWidth" :min="0" />
                 </UFormField>
                 <UFormField label="高度（px）">
-                  <UInputNumber v-model="targetHeight" :min="1" />
+                  <UInputNumber v-model="targetHeight" :min="0" />
                 </UFormField>
               </div>
 
-              <UCard variant="soft">
+              <UCard variant="subtle">
                 <div class="space-y-1 text-sm">
-                  <p class="text-muted">
+                  <p class="text-toned">
                     已选图片：<span class="font-semibold">{{ validImageCount }}</span>
                   </p>
-                  <p class="text-muted">
+                  <p class="text-toned">
                     原始总大小：<span class="font-semibold">{{ totalSourceSizeText }}</span>
                   </p>
-                  <p v-if="progressText" class="text-muted">
+                  <p v-if="progressText" class="text-toned">
                     处理进度：<span class="font-semibold">{{ progressText }}</span>
                   </p>
                 </div>
@@ -344,20 +344,25 @@ function openPreview(target: PreviewTarget) {
                 :description="errorMessage"
               />
             </div>
-          </UCard>
+          </div>
 
           <!-- 预览与结果卡片 -->
-          <UCard>
+          <div>
             <div class="space-y-4">
               <div v-if="imageItems.length" class="grid gap-4 md:grid-cols-2">
-                <UCard v-for="item in imageItems" :key="item.id" variant="subtle">
+                <UCard
+                  v-for="item in imageItems"
+                  :key="item.id"
+                  variant="subtle"
+                  :ui="{ body: 'p-3 sm:p-4' }"
+                >
                   <div class="space-y-3">
                     <p class="truncate text-sm font-medium">{{ item.file.name }}</p>
 
                     <div class="grid gap-3 sm:grid-cols-2">
                       <!-- 原图缩略图 -->
                       <div
-                        class="group relative flex aspect-square cursor-zoom-in items-center justify-center overflow-hidden rounded-md border border-default bg-muted/20"
+                        class="group relative flex aspect-square cursor-zoom-in items-center justify-center overflow-hidden rounded-md border border-accented"
                         @click="
                           openPreview({
                             url: item.sourceUrl,
@@ -381,7 +386,7 @@ function openPreview(target: PreviewTarget) {
                       <!-- 压缩结果缩略图 -->
                       <div
                         :class="item.result?.url ? 'cursor-zoom-in' : ''"
-                        class="group relative flex aspect-square items-center justify-center overflow-hidden rounded-md border border-default bg-muted/20"
+                        class="group relative flex aspect-square items-center justify-center overflow-hidden rounded-md border border-accented"
                         @click="
                           item.result?.url &&
                           openPreview({
@@ -397,7 +402,7 @@ function openPreview(target: PreviewTarget) {
                           :src="item.result.url"
                           class="h-full w-full object-contain transition-opacity group-hover:opacity-30"
                         />
-                        <span v-else class="text-sm text-muted">未生成</span>
+                        <span v-else class="text-sm text-toned">未生成</span>
                         <div
                           v-if="item.result?.url"
                           class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
@@ -407,7 +412,7 @@ function openPreview(target: PreviewTarget) {
                       </div>
                     </div>
 
-                    <div class="space-y-1 text-sm text-muted">
+                    <div class="space-y-1 text-sm text-toned">
                       <p>
                         原始尺寸：<span class="font-semibold"
                           >{{ item.sourceWidth }} × {{ item.sourceHeight }}</span
@@ -439,48 +444,38 @@ function openPreview(target: PreviewTarget) {
                       variant="soft"
                       :description="item.error"
                     />
-
-                    <UButton
-                      size="sm"
-                      color="neutral"
-                      variant="outline"
-                      :disabled="!item.result"
-                      @click="downloadWebp(item)"
-                    >
-                      下载该图 WebP
-                    </UButton>
                   </div>
                 </UCard>
               </div>
 
               <UAlert
                 v-else
-                variant="soft"
                 color="neutral"
+                variant="outline"
                 description="请先选择一张或多张图片进行预览和压缩。"
               />
 
-              <UCard variant="soft">
+              <UCard variant="subtle">
                 <div class="space-y-1 text-sm">
-                  <p class="text-muted">
+                  <p class="text-toned">
                     已压缩数量：<span class="font-semibold"
                       >{{ processedCount }} / {{ validImageCount }}</span
                     >
                   </p>
-                  <p class="text-muted">
+                  <p class="text-toned">
                     输出总大小：<span class="font-semibold">{{ totalResultSizeText }}</span>
                   </p>
-                  <p class="text-muted">
+                  <p class="text-toned">
                     总体积占比：<span class="font-semibold">{{ totalRatioText }}</span>
                   </p>
                 </div>
               </UCard>
             </div>
-          </UCard>
+          </div>
         </div>
       </UPageBody>
     </UPage>
 
     <AppImagePreview ref="imagePreviewRef" />
-  </section>
+  </UContainer>
 </template>
