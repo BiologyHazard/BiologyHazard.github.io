@@ -1,262 +1,219 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useNowMs } from '@/composables/useNowMs'
+import { useClipboard, useNow } from '@vueuse/core'
+import { computed, ref } from 'vue'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 
-const { nowMs } = useNowMs(64)
-const nowSecInteger = computed(() => Math.floor(nowMs.value / 1000))
-const nowSecFloat = computed(() => (nowMs.value / 1000).toFixed(3))
-const nowDateStr = computed(() => formatDate(new Date(nowMs.value), false))
-const nowDateMsStr = computed(() => formatDate(new Date(nowMs.value), true))
+dayjs.extend(utc)
 
-// 时间戳 → 时间
-const timestampInput = ref('')
-const timestampResult = ref('')
-const timestampError = ref('')
+const now = useNow()
+const inputValue = ref('')
 
-/**
- * 检测输入属于哪种格式：
- *   'sec'    秒（整数）  → 显示不带毫秒
- *   'secf'   秒（浮点）  → 显示带毫秒
- *   'ms'     毫秒（整数）→ 显示带毫秒
- */
-function detectFormat(raw: string): 'sec' | 'secf' | 'ms' | null {
+function isTimestamp(raw: string): boolean {
+  return /^-?\d+(\.\d+)?$/.test(raw)
+}
+
+function detectTimestampFormat(raw: string): 'sec' | 'secf' | 'ms' {
   if (raw.includes('.')) return 'secf'
   if (raw.length >= 13) return 'ms'
-  if (raw.length > 0) return 'sec'
-  return null
+  return 'sec'
 }
 
-function convertTimestampToDate() {
-  timestampError.value = ''
-  timestampResult.value = ''
-  const raw = timestampInput.value.trim()
-  if (!raw) return
-  const ts = Number(raw)
-  if (!Number.isFinite(ts)) {
-    timestampError.value = '无效的时间戳'
-    return
-  }
-  const fmt = detectFormat(raw)
-  let ms: number
-  let includeMs: boolean
-  if (fmt === 'secf') {
-    ms = Math.round(ts * 1000)
-    includeMs = true
-  } else if (fmt === 'ms') {
-    ms = ts
-    includeMs = true
+type ParseResult = { d: dayjs.Dayjs; error: null } | { d: null; error: string }
+
+const parseResult = computed<ParseResult>(() => {
+  const raw = inputValue.value.trim()
+  if (!raw) {
+    return { d: dayjs(now.value), error: null }
+  } else if (isTimestamp(raw)) {
+    const ts = Number(raw)
+    if (!Number.isFinite(ts)) return { d: null, error: '无效的时间戳' }
+    const fmt = detectTimestampFormat(raw)
+    const ms = fmt === 'secf' ? Math.round(ts * 1000) : fmt === 'ms' ? ts : ts * 1000
+    const result = dayjs(ms)
+    if (!result.isValid()) return { d: null, error: '无效的时间戳' }
+    return { d: result, error: null }
   } else {
-    ms = ts * 1000
-    includeMs = false
+    const result = dayjs(raw)
+    if (!result.isValid()) {
+      return {
+        d: null,
+        error:
+          '无法解析日期时间，请使用标准格式，如 2024-01-01 12:00:00 或 2024-01-01 12:00:00.123',
+      }
+    }
+    return { d: result, error: null }
   }
-  const date = new Date(ms)
-  if (isNaN(date.getTime())) {
-    timestampError.value = '无效的时间戳'
-    return
-  }
-  timestampResult.value = formatDate(date, includeMs)
-}
+})
 
-watch(timestampInput, convertTimestampToDate)
+const d = computed(() => parseResult.value.d)
 
-function useCurrentTimestamp() {
-  timestampInput.value = String(nowSecInteger.value)
-}
+const resultSecInteger = computed(() =>
+  d.value !== null ? String(Math.floor(d.value.valueOf() / 1000)) : '',
+)
+const resultSecFloat = computed(() =>
+  d.value !== null ? (d.value.valueOf() / 1000).toFixed(3) : '',
+)
+const resultMs = computed(() => (d.value !== null ? String(d.value.valueOf()) : ''))
 
-// 时间 → 时间戳
-const dateInput = ref('')
-const dateResultSec = ref('')
-const dateResultSecFloat = ref('')
-const dateResultMs = ref('')
-const dateError = ref('')
+const resultDateSec = computed(() =>
+  d.value !== null ? d.value.format('YYYY-MM-DD HH:mm:ss') : '',
+)
+const resultDateMs = computed(() =>
+  d.value !== null ? d.value.format('YYYY-MM-DD HH:mm:ss.SSS') : '',
+)
+const resultDateLocalTZ = computed(() =>
+  d.value !== null ? d.value.format('YYYY-MM-DD HH:mm:ssZ') : '',
+)
+const resultDateLocalTZMs = computed(() =>
+  d.value !== null ? d.value.format('YYYY-MM-DD HH:mm:ss.SSSZ') : '',
+)
+const resultDateUTC = computed(() =>
+  d.value !== null ? d.value.utc().format('YYYY-MM-DD HH:mm:ss[Z]') : '',
+)
+const resultDateUTCMs = computed(() =>
+  d.value !== null ? d.value.utc().format('YYYY-MM-DD HH:mm:ss.SSS[Z]') : '',
+)
 
-function convertDateToTimestamp() {
-  dateError.value = ''
-  dateResultSec.value = ''
-  dateResultSecFloat.value = ''
-  dateResultMs.value = ''
-  const raw = dateInput.value.trim()
-  if (!raw) return
-  // 将空格替换为 T 以兼容 'YYYY-MM-DD HH:mm:ss[.SSS]' 格式
-  const date = new Date(raw.replace(' ', 'T'))
-  if (isNaN(date.getTime())) {
-    dateError.value =
-      '无法解析日期时间，请使用标准格式，如 2024-01-01 12:00:00 或 2024-01-01 12:00:00.123'
-    return
-  }
-  const totalMs = date.getTime()
-  dateResultSec.value = String(Math.floor(totalMs / 1000))
-  dateResultSecFloat.value = (totalMs / 1000).toFixed(3)
-  dateResultMs.value = String(totalMs)
-}
-
-watch(dateInput, convertDateToTimestamp)
-
-function useCurrentDatetime() {
-  dateInput.value = formatDate(new Date(), true)
-}
-
-function formatDate(date: Date, includeMs = false): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const base =
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
-    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
-  return includeMs ? `${base}.${String(date.getMilliseconds()).padStart(3, '0')}` : base
-}
-
-// 复制
-const copiedKey = ref('')
-async function copy(text: string, key: string) {
-  await navigator.clipboard.writeText(text)
-  copiedKey.value = key
-  setTimeout(() => {
-    copiedKey.value = ''
-  }, 1500)
-}
+// 复制 —— 每个按钮独立状态
+const COPIED_DURING = 1500
+const { copy: copySec, copied: copiedSec } = useClipboard({ copiedDuring: COPIED_DURING })
+const { copy: copySecf, copied: copiedSecf } = useClipboard({ copiedDuring: COPIED_DURING })
+const { copy: copyMs, copied: copiedMs } = useClipboard({ copiedDuring: COPIED_DURING })
+const { copy: copyDate, copied: copiedDate } = useClipboard({ copiedDuring: COPIED_DURING })
+const { copy: copyDateMs, copied: copiedDateMs } = useClipboard({ copiedDuring: COPIED_DURING })
+const { copy: copyLocalTZ, copied: copiedLocalTZ } = useClipboard({ copiedDuring: COPIED_DURING })
+const { copy: copyLocalTZMs, copied: copiedLocalTZMs } = useClipboard({
+  copiedDuring: COPIED_DURING,
+})
+const { copy: copyUTC, copied: copiedUTC } = useClipboard({ copiedDuring: COPIED_DURING })
+const { copy: copyUTCMs, copied: copiedUTCMs } = useClipboard({ copiedDuring: COPIED_DURING })
 </script>
 
 <template>
-  <UContainer class="max-w-2xl py-8">
-    <h1 class="mb-2 text-2xl font-bold">Unix 时间戳转换</h1>
+  <UContainer class="max-w-2xl">
+    <UPage>
+      <UPageHeader title="Unix 时间戳转换" />
 
-    <!-- 当前时间 -->
-    <UCard class="mb-6">
-      <div class="flex flex-col gap-1">
-        <div class="flex items-center gap-2">
-          <span class="w-32 shrink-0 text-sm text-gray-500 dark:text-gray-400">秒（整数）</span>
-          <span class="font-mono font-semibold tabular-nums">{{ nowSecInteger }}</span>
-          <UButton
-            size="xs"
-            variant="ghost"
-            :icon="copiedKey === 'now-sec' ? 'i-lucide-check' : 'i-lucide-copy'"
-            @click="copy(String(nowSecInteger), 'now-sec')"
-          />
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="w-32 shrink-0 text-sm text-gray-500 dark:text-gray-400">秒（浮点）</span>
-          <span class="font-mono font-semibold tabular-nums">{{ nowSecFloat }}</span>
-          <UButton
-            size="xs"
-            variant="ghost"
-            :icon="copiedKey === 'now-secf' ? 'i-lucide-check' : 'i-lucide-copy'"
-            @click="copy(nowSecFloat, 'now-secf')"
-          />
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="w-32 shrink-0 text-sm text-gray-500 dark:text-gray-400">毫秒（整数）</span>
-          <span class="font-mono font-semibold tabular-nums">{{ nowMs }}</span>
-          <UButton
-            size="xs"
-            variant="ghost"
-            :icon="copiedKey === 'now-ms' ? 'i-lucide-check' : 'i-lucide-copy'"
-            @click="copy(String(nowMs), 'now-ms')"
-          />
-        </div>
-        <USeparator class="my-1" />
-        <div class="flex items-center gap-2">
-          <span class="w-32 shrink-0 text-sm text-gray-500 dark:text-gray-400">日期时间</span>
-          <span class="font-mono font-semibold tabular-nums">{{ nowDateStr }}</span>
-          <UButton
-            size="xs"
-            variant="ghost"
-            :icon="copiedKey === 'now-date' ? 'i-lucide-check' : 'i-lucide-copy'"
-            @click="copy(nowDateStr, 'now-date')"
-          />
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="w-32 shrink-0 text-sm text-gray-500 dark:text-gray-400">日期时间（ms）</span>
-          <span class="font-mono font-semibold tabular-nums">{{ nowDateMsStr }}</span>
-          <UButton
-            size="xs"
-            variant="ghost"
-            :icon="copiedKey === 'now-date-ms' ? 'i-lucide-check' : 'i-lucide-copy'"
-            @click="copy(nowDateMsStr, 'now-date-ms')"
-          />
-        </div>
-      </div>
-    </UCard>
+      <UPageBody>
+        <UCard>
+          <div class="flex flex-col gap-3">
+            <UFormField label="输入时间戳或日期时间">
+              <UInput
+                v-model="inputValue"
+                class="w-full font-mono"
+                placeholder="留空显示当前时间；输入时间戳（秒/毫秒）或日期时间"
+              />
+            </UFormField>
 
-    <!-- 时间戳 → 时间 -->
-    <UCard class="mb-6">
-      <template #header>
-        <h2 class="font-semibold">时间戳 → 日期时间</h2>
-      </template>
+            <div v-if="!parseResult.error" class="flex flex-col gap-1">
+              <div class="flex items-center gap-2">
+                <span class="w-32 shrink-0 text-sm text-muted">秒（整数）</span>
+                <span class="font-mono tabular-nums">{{ resultSecInteger }}</span>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  :color="copiedSec ? 'success' : 'neutral'"
+                  :icon="copiedSec ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  @click="copySec(resultSecInteger)"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-32 shrink-0 text-sm text-muted">秒（浮点）</span>
+                <span class="font-mono tabular-nums">{{ resultSecFloat }}</span>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  :color="copiedSecf ? 'success' : 'neutral'"
+                  :icon="copiedSecf ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  @click="copySecf(resultSecFloat)"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-32 shrink-0 text-sm text-muted">毫秒（整数）</span>
+                <span class="font-mono tabular-nums">{{ resultMs }}</span>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  :color="copiedMs ? 'success' : 'neutral'"
+                  :icon="copiedMs ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  @click="copyMs(resultMs)"
+                />
+              </div>
+              <USeparator class="my-1" />
+              <div class="flex items-center gap-2">
+                <span class="w-32 shrink-0 text-sm text-muted">日期时间</span>
+                <span class="font-mono tabular-nums">{{ resultDateSec }}</span>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  :color="copiedDate ? 'success' : 'neutral'"
+                  :icon="copiedDate ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  @click="copyDate(resultDateSec)"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-32 shrink-0 text-sm text-muted">日期时间（ms）</span>
+                <span class="font-mono tabular-nums">{{ resultDateMs }}</span>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  :color="copiedDateMs ? 'success' : 'neutral'"
+                  :icon="copiedDateMs ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  @click="copyDateMs(resultDateMs)"
+                />
+              </div>
+              <USeparator class="my-1" />
+              <div class="flex items-center gap-2">
+                <span class="w-32 shrink-0 text-sm text-muted">本地（带时区）</span>
+                <span class="font-mono tabular-nums">{{ resultDateLocalTZ }}</span>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  :color="copiedLocalTZ ? 'success' : 'neutral'"
+                  :icon="copiedLocalTZ ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  @click="copyLocalTZ(resultDateLocalTZ)"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-32 shrink-0 text-sm text-muted">本地（带时区 ms）</span>
+                <span class="font-mono tabular-nums">{{ resultDateLocalTZMs }}</span>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  :color="copiedLocalTZMs ? 'success' : 'neutral'"
+                  :icon="copiedLocalTZMs ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  @click="copyLocalTZMs(resultDateLocalTZMs)"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-32 shrink-0 text-sm text-muted">UTC</span>
+                <span class="font-mono tabular-nums">{{ resultDateUTC }}</span>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  :color="copiedUTC ? 'success' : 'neutral'"
+                  :icon="copiedUTC ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  @click="copyUTC(resultDateUTC)"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-32 shrink-0 text-sm text-muted">UTC（ms）</span>
+                <span class="font-mono tabular-nums">{{ resultDateUTCMs }}</span>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  :color="copiedUTCMs ? 'success' : 'neutral'"
+                  :icon="copiedUTCMs ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  @click="copyUTCMs(resultDateUTCMs)"
+                />
+              </div>
+            </div>
 
-      <div class="flex flex-col gap-3">
-        <div class="flex gap-2">
-          <UInput
-            v-model="timestampInput"
-            class="flex-1 font-mono"
-            placeholder="输入 Unix 时间戳（秒或毫秒）"
-          />
-          <UButton variant="subtle" @click="useCurrentTimestamp">使用当前</UButton>
-        </div>
-
-        <UAlert v-if="timestampError" color="error" :description="timestampError" />
-
-        <div v-if="timestampResult" class="flex items-center gap-2">
-          <span class="font-mono text-base">{{ timestampResult }}</span>
-          <UButton
-            size="xs"
-            variant="ghost"
-            :icon="copiedKey === 'tsResult' ? 'i-lucide-check' : 'i-lucide-copy'"
-            @click="copy(timestampResult, 'tsResult')"
-          />
-        </div>
-      </div>
-    </UCard>
-
-    <!-- 时间 → 时间戳 -->
-    <UCard>
-      <template #header>
-        <h2 class="font-semibold">日期时间 → 时间戳</h2>
-      </template>
-
-      <div class="flex flex-col gap-3">
-        <div class="flex gap-2">
-          <UInput
-            v-model="dateInput"
-            class="flex-1 font-mono"
-            placeholder="如：2024-01-01 12:00:00 或 2024-01-01 12:00:00.123"
-          />
-          <UButton variant="subtle" @click="useCurrentDatetime">使用当前</UButton>
-        </div>
-
-        <UAlert v-if="dateError" color="error" :description="dateError" />
-
-        <div v-if="dateResultSec" class="flex flex-col gap-1">
-          <div class="flex items-center gap-2">
-            <span class="w-24 shrink-0 text-sm text-gray-500 dark:text-gray-400">秒（整数）</span>
-            <span class="font-mono">{{ dateResultSec }}</span>
-            <UButton
-              size="xs"
-              variant="ghost"
-              :icon="copiedKey === 'sec' ? 'i-lucide-check' : 'i-lucide-copy'"
-              @click="copy(dateResultSec, 'sec')"
-            />
+            <UAlert v-else color="error" variant="subtle" :description="parseResult.error" />
           </div>
-          <div class="flex items-center gap-2">
-            <span class="w-24 shrink-0 text-sm text-gray-500 dark:text-gray-400">秒（浮点）</span>
-            <span class="font-mono">{{ dateResultSecFloat }}</span>
-            <UButton
-              size="xs"
-              variant="ghost"
-              :icon="copiedKey === 'secf' ? 'i-lucide-check' : 'i-lucide-copy'"
-              @click="copy(dateResultSecFloat, 'secf')"
-            />
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-24 shrink-0 text-sm text-gray-500 dark:text-gray-400">毫秒（整数）</span>
-            <span class="font-mono">{{ dateResultMs }}</span>
-            <UButton
-              size="xs"
-              variant="ghost"
-              :icon="copiedKey === 'ms' ? 'i-lucide-check' : 'i-lucide-copy'"
-              @click="copy(dateResultMs, 'ms')"
-            />
-          </div>
-        </div>
-      </div>
-    </UCard>
+        </UCard>
+      </UPageBody>
+    </UPage>
   </UContainer>
 </template>
