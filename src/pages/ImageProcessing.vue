@@ -20,6 +20,7 @@ type ImageItem = {
   error: string
 }
 
+const files = ref<File[]>([])
 const imageItems = ref<ImageItem[]>([])
 
 const qualityPercent = ref<number>(50)
@@ -34,6 +35,9 @@ const scaleRatio = ref<number>(1.0)
 const isCompressing = ref<boolean>(false)
 const errorMessage = ref<string>('')
 const progressText = ref<string>('')
+
+const outputDirHandle = ref<FileSystemDirectoryHandle | null>(null)
+const isSavingToFolder = ref<boolean>(false)
 
 const quality = computed(() => Math.min(1, Math.max(0.1, qualityPercent.value / 100)))
 
@@ -288,6 +292,79 @@ async function downloadAll(): Promise<void> {
   }
 }
 
+async function selectOutputDirectory(): Promise<void> {
+  try {
+    // File System Access API - 新API，TypeScript可能不认识
+    const showDirectoryPicker = (
+      window as Window &
+        typeof globalThis & { showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle> }
+    ).showDirectoryPicker
+    if (!showDirectoryPicker) {
+      errorMessage.value = '您的浏览器不支持文件系统访问 API。'
+      return
+    }
+    const dirHandle = await showDirectoryPicker()
+    outputDirHandle.value = dirHandle
+    errorMessage.value = ''
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      // 用户取消了选择，不显示错误
+      return
+    }
+    errorMessage.value = error instanceof Error ? error.message : '选择文件夹失败。'
+  }
+}
+
+async function exportToFolder(): Promise<void> {
+  errorMessage.value = ''
+  progressText.value = ''
+
+  await selectOutputDirectory()
+  if (!outputDirHandle.value) {
+    // 用户取消了选择
+    return
+  }
+
+  const readyItems = imageItems.value.filter((item) => item.result)
+  if (!readyItems.length) {
+    errorMessage.value = '没有可导出的压缩图片。'
+    return
+  }
+
+  isSavingToFolder.value = true
+  let successCount = 0
+  const total = readyItems.length
+
+  try {
+    const dirHandle = outputDirHandle.value
+    if (!dirHandle) return
+
+    for (let i = 0; i < readyItems.length; i++) {
+      const item = readyItems[i]
+      if (!item?.result) continue
+      const filenameWithoutExt = item.file.name.replace(/\.[^.]+$/, '')
+      const filename = `${filenameWithoutExt || 'image'}.webp`
+
+      progressText.value = `正在导出 ${i + 1}/${total}…`
+
+      try {
+        const fileHandle = await dirHandle.getFileHandle(filename, { create: true })
+        const writable = await fileHandle.createWritable()
+        await writable.write(item.result.blob)
+        await writable.close()
+        successCount += 1
+      } catch (error) {
+        console.error(`导出 ${filename} 失败:`, error)
+      }
+    }
+    progressText.value = `导出完成：${successCount}/${total}`
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '导出失败，请重试。'
+  } finally {
+    isSavingToFolder.value = false
+  }
+}
+
 onBeforeUnmount(() => {
   clearAllItems()
 })
@@ -314,6 +391,7 @@ function openPreview(target: PreviewTarget) {
             <div class="space-y-4">
               <UFormField label="选择图片">
                 <UFileUpload
+                  v-model="files"
                   multiple
                   highlight
                   layout="list"
@@ -402,13 +480,37 @@ function openPreview(target: PreviewTarget) {
                   {{ isCompressing ? '批量压缩中...' : '开始批量压缩' }}
                 </UButton>
                 <UButton
-                  color="neutral"
+                  color="primary"
                   variant="outline"
                   icon="i-lucide-download"
                   :disabled="!processedCount"
                   @click="downloadAll"
                 >
-                  一键下载全部 ({{ processedCount }})
+                  下载全部 ({{ processedCount }})
+                </UButton>
+                <UButton
+                  color="success"
+                  variant="outline"
+                  icon="i-lucide-save"
+                  :loading="isSavingToFolder"
+                  :disabled="!processedCount || isSavingToFolder"
+                  @click="exportToFolder"
+                >
+                  {{ isSavingToFolder ? '导出中...' : `导出到文件夹 (${processedCount})` }}
+                </UButton>
+                <UButton
+                  color="error"
+                  variant="outline"
+                  icon="i-lucide-trash-2"
+                  :disabled="!imageItems.length || isCompressing"
+                  @click="
+                    () => {
+                      files = []
+                      handleFileUpdate(files)
+                    }
+                  "
+                >
+                  清除全部
                 </UButton>
               </div>
 
