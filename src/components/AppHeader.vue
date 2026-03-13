@@ -25,7 +25,11 @@ const items = computed(() => [
       </RouterLink>
     </template>
 
-    <UNavigationMenu :items="items" variant="link" class="hidden lg:block" />
+    <UNavigationMenu :items="items" variant="link" />
+
+    <template #body>
+      <UNavigationMenu :items="items" variant="pill" orientation="vertical" />
+    </template>
 
     <template #right>
       <UColorModeButton />
