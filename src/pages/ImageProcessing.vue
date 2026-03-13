@@ -26,6 +26,11 @@ const qualityPercent = ref<number>(50)
 const targetWidth = ref<number>(0)
 const targetHeight = ref<number>(0)
 
+const resizeMode = ref<'custom' | 'contain' | 'scale'>('custom')
+const maxLongSide = ref<number>(1920)
+const maxShortSide = ref<number>(1080)
+const scaleRatio = ref<number>(1.0)
+
 const isCompressing = ref<boolean>(false)
 const errorMessage = ref<string>('')
 const progressText = ref<string>('')
@@ -145,8 +150,41 @@ async function handleFileUpdate(files: File[] | null | undefined): Promise<void>
 }
 
 async function compressItem(item: ImageItem): Promise<void> {
-  const outputWidth = Math.max(1, Math.floor(targetWidth.value || item.sourceWidth))
-  const outputHeight = Math.max(1, Math.floor(targetHeight.value || item.sourceHeight))
+  let outputWidth = item.sourceWidth
+  let outputHeight = item.sourceHeight
+
+  // 计算输出尺寸
+  switch (resizeMode.value) {
+    // 按缩放倍率调整尺寸
+    case 'scale': {
+      const ratio = scaleRatio.value || 1
+      outputWidth = Math.max(1, Math.round(item.sourceWidth * ratio))
+      outputHeight = Math.max(1, Math.round(item.sourceHeight * ratio))
+      break
+    }
+    // 按长短边限制调整尺寸，保持宽高比
+    case 'contain': {
+      const currentLong = Math.max(item.sourceWidth, item.sourceHeight)
+      const currentShort = Math.min(item.sourceWidth, item.sourceHeight)
+
+      const targetLong = maxLongSide.value || currentLong
+      const targetShort = maxShortSide.value || currentShort
+
+      const ratioLong = targetLong / currentLong
+      const ratioShort = targetShort / currentShort
+      const ratio = Math.min(1, ratioLong, ratioShort)
+
+      outputWidth = Math.max(1, Math.round(item.sourceWidth * ratio))
+      outputHeight = Math.max(1, Math.round(item.sourceHeight * ratio))
+      break
+    }
+    // 自定义指定宽高
+    case 'custom': {
+      outputWidth = Math.max(1, Math.floor(targetWidth.value || item.sourceWidth))
+      outputHeight = Math.max(1, Math.floor(targetHeight.value || item.sourceHeight))
+      break
+    }
+  }
 
   const image = await loadImage(item.sourceUrl)
   const canvas = document.createElement('canvas')
@@ -295,14 +333,51 @@ function openPreview(target: PreviewTarget) {
                 <USlider v-model="qualityPercent" :min="0" :step="1" :max="100" />
               </UFormField>
 
-              <div class="grid grid-cols-2 gap-4">
-                <UFormField label="宽度（px）">
-                  <UInputNumber v-model="targetWidth" :min="0" />
-                </UFormField>
-                <UFormField label="高度（px）">
-                  <UInputNumber v-model="targetHeight" :min="0" />
-                </UFormField>
-              </div>
+              <UFormField label="分辨率限制方式">
+                <UTabs
+                  v-model="resizeMode"
+                  :items="[
+                    { label: '指定宽高', value: 'custom', slot: 'custom' },
+                    { label: '指定长短边', value: 'contain', slot: 'contain' },
+                    { label: '指定缩放倍率', value: 'scale', slot: 'scale' },
+                  ]"
+                >
+                  <template #custom>
+                    <div class="grid grid-cols-2 gap-4">
+                      <UFormField label="宽度（px）">
+                        <UInputNumber v-model="targetWidth" :min="0" />
+                      </UFormField>
+                      <UFormField label="高度（px）">
+                        <UInputNumber v-model="targetHeight" :min="0" />
+                      </UFormField>
+                    </div>
+                  </template>
+
+                  <template #contain>
+                    <div class="grid grid-cols-2 gap-4">
+                      <UFormField label="长边最大（px）">
+                        <UInputNumber v-model="maxLongSide" :min="0" />
+                      </UFormField>
+                      <UFormField label="短边最大（px）">
+                        <UInputNumber v-model="maxShortSide" :min="0" />
+                      </UFormField>
+                    </div>
+                  </template>
+
+                  <template #scale>
+                    <div>
+                      <UFormField label="缩放倍率">
+                        <UInputNumber
+                          v-model="scaleRatio"
+                          :min="0"
+                          :step="0.25"
+                          :step-snapping="false"
+                        />
+                      </UFormField>
+                    </div>
+                  </template>
+                </UTabs>
+              </UFormField>
 
               <UCard variant="subtle">
                 <div class="space-y-1 text-sm">
