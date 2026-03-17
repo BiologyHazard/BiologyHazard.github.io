@@ -315,6 +315,34 @@ async function selectOutputDirectory(): Promise<void> {
   }
 }
 
+async function getAvailableFilename(
+  dirHandle: FileSystemDirectoryHandle,
+  baseName: string,
+  extension: string
+): Promise<string> {
+  const safeBase = baseName || 'image'
+  let candidate = `${safeBase}.${extension}`
+  let index = 1
+
+  // Try increasing indices until we find a filename that does not exist.
+  while (true) {
+    try {
+      // If this succeeds, the file exists and we need a new candidate name.
+      await dirHandle.getFileHandle(candidate)
+      candidate = `${safeBase} (${index}).${extension}`
+      index += 1
+    } catch (error) {
+      const err = error as DOMException
+      // NotFoundError means the file does not exist yet, so we can safely use this name.
+      if (err && err.name === 'NotFoundError') {
+        return candidate
+      }
+      // For other errors, rethrow so the caller can handle them.
+      throw error
+    }
+  }
+}
+
 async function exportToFolder(): Promise<void> {
   errorMessage.value = ''
   progressText.value = ''
@@ -343,7 +371,8 @@ async function exportToFolder(): Promise<void> {
       const item = readyItems[i]
       if (!item?.result) continue
       const filenameWithoutExt = item.file.name.replace(/\.[^.]+$/, '')
-      const filename = `${filenameWithoutExt || 'image'}.webp`
+      const baseName = filenameWithoutExt || 'image'
+      const filename = await getAvailableFilename(dirHandle, baseName, 'webp')
 
       progressText.value = `正在导出 ${i + 1}/${total}…`
 
