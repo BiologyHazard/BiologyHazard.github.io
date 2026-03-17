@@ -24,11 +24,7 @@ function jsonUnescape() {
       output.value = JSON.parse(`"${str}"`)
     }
   } catch (e) {
-    try {
-      output.value = String(JSON.parse(`{"val":${input.value}}`).val)
-    } catch {
-      output.value = '错误: ' + (e as Error).message
-    }
+    output.value = '错误: ' + (e as Error).message
   }
 }
 
