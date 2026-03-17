@@ -21,7 +21,7 @@ const {
 
 const overlayRef = ref<HTMLDivElement | null>(null)
 
-watch(preview, async value => {
+watch(preview, async (value) => {
   if (value) {
     await nextTick()
     overlayRef.value?.focus()
