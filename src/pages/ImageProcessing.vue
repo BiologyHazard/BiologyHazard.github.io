@@ -318,7 +318,7 @@ async function selectOutputDirectory(): Promise<void> {
 async function getAvailableFilename(
   dirHandle: FileSystemDirectoryHandle,
   baseName: string,
-  extension: string
+  extension: string,
 ): Promise<string> {
   const safeBase = baseName || 'image'
   let candidate = `${safeBase}.${extension}`
