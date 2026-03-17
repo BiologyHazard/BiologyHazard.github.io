@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch, nextTick } from 'vue'
 import { useImagePreview } from '@/composables/useImagePreview'
 
 const {
@@ -18,6 +19,15 @@ const {
   download,
 } = useImagePreview()
 
+const overlayRef = ref<HTMLDivElement | null>(null)
+
+watch(preview, async value => {
+  if (value) {
+    await nextTick()
+    overlayRef.value?.focus()
+  }
+})
+
 defineExpose({ open })
 </script>
 
@@ -31,6 +41,7 @@ defineExpose({ open })
     >
       <div
         v-if="preview"
+        ref="overlayRef"
         tabindex="0"
         class="fixed inset-0 z-50 flex flex-col bg-black/92 outline-none"
         @keydown="onKeydown"
