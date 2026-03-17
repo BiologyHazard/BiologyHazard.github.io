@@ -18,6 +18,11 @@ const router = createRouter({
       name: 'unix-timestamp',
       component: () => import('@/pages/UnixTimestamp.vue'),
     },
+    {
+      path: '/string-converter',
+      name: 'string-converter',
+      component: () => import('@/pages/StringConverter.vue'),
+    },
   ],
 })
 

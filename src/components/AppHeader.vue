@@ -14,6 +14,10 @@ const items = computed(() => [
     label: '时间戳转换',
     to: '/unix-timestamp',
   },
+  {
+    label: '字符串转换',
+    to: '/string-converter',
+  },
 ])
 </script>
 
