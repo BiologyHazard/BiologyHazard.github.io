@@ -3,11 +3,14 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import AppImagePreview from '@/components/AppImagePreview.vue'
 import type { PreviewTarget } from '@/composables/useImagePreview'
 
+type ImageFormat = 'image/webp' | 'image/jpeg' | 'image/png'
+
 type ImageResult = {
   blob: Blob
   url: string
   width: number
   height: number
+  format: ImageFormat
 }
 
 type ImageItem = {
@@ -23,6 +26,7 @@ type ImageItem = {
 const files = ref<File[]>([])
 const imageItems = ref<ImageItem[]>([])
 
+const targetFormat = ref<ImageFormat>('image/webp')
 const qualityPercent = ref<number>(50)
 const targetWidth = ref<number>(0)
 const targetHeight = ref<number>(0)
@@ -206,13 +210,13 @@ async function compressItem(item: ImageItem): Promise<void> {
     canvas.toBlob(
       (generatedBlob) => {
         if (!generatedBlob) {
-          reject(new Error('WebP 编码失败，请尝试调整参数后重试。'))
+          reject(new Error(`${targetFormat.value} 编码失败，请尝试调整参数后重试。`))
           return
         }
         resolve(generatedBlob)
       },
-      'image/webp',
-      quality.value,
+      targetFormat.value,
+      targetFormat.value === 'image/png' ? undefined : quality.value,
     )
   })
 
@@ -224,6 +228,7 @@ async function compressItem(item: ImageItem): Promise<void> {
     url: URL.createObjectURL(blob),
     width: outputWidth,
     height: outputHeight,
+    format: targetFormat.value,
   }
 }
 
@@ -240,7 +245,7 @@ async function runWithConcurrencyLimit<T>(
   await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker))
 }
 
-async function compressToWebp(): Promise<void> {
+async function compressToImages(): Promise<void> {
   errorMessage.value = ''
   progressText.value = ''
 
@@ -275,19 +280,33 @@ async function compressToWebp(): Promise<void> {
   }
 }
 
-function downloadWebp(item: ImageItem): void {
+function getExtension(mimeType: ImageFormat): string {
+  switch (mimeType) {
+    case 'image/jpeg':
+      return 'jpg'
+    case 'image/png':
+      return 'png'
+    case 'image/webp':
+      return 'webp'
+    default:
+      return ''
+  }
+}
+
+function downloadImage(item: ImageItem): void {
   if (!item.result) return
   const filenameWithoutExt = item.file.name.replace(/\.[^.]+$/, '')
+  const extension = getExtension(item.result.format)
   const anchor = document.createElement('a')
   anchor.href = item.result.url
-  anchor.download = `${filenameWithoutExt || 'compressed'}.webp`
+  anchor.download = `${filenameWithoutExt || 'compressed'}.${extension}`
   anchor.click()
 }
 
 async function downloadAll(): Promise<void> {
   const readyItems = imageItems.value.filter((item) => item.result)
   for (const item of readyItems) {
-    downloadWebp(item)
+    downloadImage(item)
     await new Promise((resolve) => setTimeout(resolve, 100))
   }
 }
@@ -372,7 +391,8 @@ async function exportToFolder(): Promise<void> {
       if (!item?.result) continue
       const filenameWithoutExt = item.file.name.replace(/\.[^.]+$/, '')
       const baseName = filenameWithoutExt || 'image'
-      const filename = await getAvailableFilename(dirHandle, baseName, 'webp')
+      const extension = getExtension(item.result.format)
+      const filename = await getAvailableFilename(dirHandle, baseName, extension)
 
       progressText.value = `正在导出 ${i + 1}/${total}…`
 
@@ -433,7 +453,18 @@ function openPreview(target: PreviewTarget) {
                 />
               </UFormField>
 
-              <UFormField label="质量">
+              <UFormField label="目标格式">
+                <UTabs
+                  v-model="targetFormat"
+                  :items="[
+                    { label: 'WebP', value: 'image/webp' },
+                    { label: 'JPEG', value: 'image/jpeg' },
+                    { label: 'PNG', value: 'image/png' },
+                  ]"
+                />
+              </UFormField>
+
+              <UFormField v-show="targetFormat !== 'image/png'" label="质量">
                 <template #hint>
                   <span class="text-sm font-semibold text-primary">{{ qualityPercent }}</span>
                 </template>
@@ -504,7 +535,7 @@ function openPreview(target: PreviewTarget) {
                 <UButton
                   :loading="isCompressing"
                   :disabled="!imageItems.length || isCompressing"
-                  @click="compressToWebp"
+                  @click="compressToImages"
                 >
                   {{ isCompressing ? '批量压缩中...' : '开始批量压缩' }}
                 </UButton>
@@ -598,7 +629,9 @@ function openPreview(target: PreviewTarget) {
                           openPreview({
                             url: item.result.url,
                             name: item.file.name,
-                            downloadName: item.file.name.replace(/\.[^.]+$/, '') + '.webp',
+                            downloadName: `${item.file.name.replace(/\.[^.]+$/, '')}.${getExtension(
+                              item.result.format,
+                            )}`,
                           })
                         "
                       >
