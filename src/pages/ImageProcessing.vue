@@ -69,14 +69,15 @@ function getItemRatio(item: ImageItem): string {
 
 function formatBytes(bytes: number): string {
   if (!bytes) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
+  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
   let current = bytes
   let index = 0
-  while (current >= 1024 && index < units.length - 1) {
+  while (index < units.length - 1 && current >= 1024) {
     current /= 1024
     index += 1
   }
-  return `${current.toFixed(index === 0 ? 0 : 2)} ${units[index]}`
+  const unit = units[index]
+  return `${current.toFixed(unit === 'B' ? 0 : 2)} ${unit}`
 }
 
 function revokeUrl(url: string): void {
