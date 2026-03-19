@@ -31,7 +31,7 @@ const qualityPercent = ref<number>(50)
 const targetWidth = ref<number>(0)
 const targetHeight = ref<number>(0)
 
-const resizeMode = ref<'custom' | 'contain' | 'scale'>('custom')
+const resizeMode = ref<'custom' | 'contain' | 'scale'>('scale')
 const maxLongSide = ref<number>(1920)
 const maxShortSide = ref<number>(1080)
 const scaleRatio = ref<number>(1.0)
