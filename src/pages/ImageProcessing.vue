@@ -432,7 +432,7 @@ function openPreview(target: PreviewTarget) {
     <UPage>
       <UPageHeader
         description="上传图片后可自定义质量与分辨率，一键处理并下载。"
-        title="图片压缩与格式转换"
+        title="图片处理"
       />
 
       <UPageBody>
