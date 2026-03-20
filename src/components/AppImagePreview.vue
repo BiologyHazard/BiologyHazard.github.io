@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { watch, nextTick, useTemplateRef } from 'vue'
 import { useImagePreview } from '@/composables/useImagePreview'
+import { nextTick, useTemplateRef, watch } from 'vue'
 
 const {
   preview,
@@ -107,6 +107,7 @@ defineExpose({ open })
             :alt="preview.name"
             class="max-w-none"
             draggable="false"
+            referrerpolicy="no-referrer"
             :src="preview.url"
             :style="imgStyle"
             @load="onImageLoad"
