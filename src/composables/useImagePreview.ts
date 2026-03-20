@@ -1,5 +1,10 @@
 import { computed, ref } from 'vue'
 
+export type Point = {
+  x: number
+  y: number
+}
+
 export type PreviewTarget = {
   url: string
   name: string
@@ -8,11 +13,11 @@ export type PreviewTarget = {
 
 export function useImagePreview() {
   const preview = ref<PreviewTarget | null>(null)
-  const scale = ref(1)
-  const offset = ref({ x: 0, y: 0 })
-  const isDragging = ref(false)
-  const dragStart = ref({ x: 0, y: 0 })
-  const offsetStart = ref({ x: 0, y: 0 })
+  const scale = ref<number>(1)
+  const offset = ref<Point>({ x: 0, y: 0 })
+  const isDragging = ref<boolean>(false)
+  const dragStart = ref<Point>({ x: 0, y: 0 })
+  const offsetStart = ref<Point>({ x: 0, y: 0 })
 
   const imgStyle = computed(() => ({
     transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
