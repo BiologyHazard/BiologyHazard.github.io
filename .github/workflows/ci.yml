@@ -28,13 +28,13 @@ jobs:
           fi
 
       - name: Lint
+        if: ${{ always() }}
         run: npm run lint
-        continue-on-error: true
 
       - name: Format Check
+        if: ${{ always() }}
         run: npm run format:check
-        continue-on-error: true
 
       - name: Type Check
+        if: ${{ always() }}
         run: npm run type-check
-        continue-on-error: true
