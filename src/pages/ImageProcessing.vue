@@ -439,7 +439,7 @@ function openPreview(target: PreviewTarget) {
         <div class="grid gap-6 lg:grid-cols-2">
           <!-- 参数设置卡片 -->
           <div>
-            <div class="space-y-4">
+            <div class="space-y-6">
               <UFormField label="选择图片">
                 <UFileUpload
                   v-model="files"
@@ -459,18 +459,20 @@ function openPreview(target: PreviewTarget) {
                 <UTabs
                   v-model="targetFormat"
                   :items="[
-                    { label: 'WebP', value: 'image/webp' },
-                    { label: 'JPEG', value: 'image/jpeg' },
+                    { label: 'WebP', value: 'image/webp', slot: 'has-quality' },
+                    { label: 'JPEG', value: 'image/jpeg', slot: 'has-quality' },
                     { label: 'PNG', value: 'image/png' },
                   ]"
-                />
-              </UFormField>
-
-              <UFormField v-show="targetFormat !== 'image/png'" label="质量">
-                <template #hint>
-                  <span class="text-sm font-semibold text-primary">{{ qualityPercent }}</span>
-                </template>
-                <USlider v-model="qualityPercent" :max="100" :min="0" :step="1" />
+                >
+                  <template #has-quality>
+                    <UFormField label="质量">
+                      <template #hint>
+                        <span class="text-sm font-semibold text-primary">{{ qualityPercent }}</span>
+                      </template>
+                      <USlider v-model="qualityPercent" :max="100" :min="0" :step="1" />
+                    </UFormField>
+                  </template>
+                </UTabs>
               </UFormField>
 
               <UFormField label="分辨率限制方式">
