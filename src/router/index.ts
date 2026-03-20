@@ -1,27 +1,32 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import ImageProcessing from '@/pages/ImageProcessing.vue'
+import Home from '@/pages/index.vue'
+import StringConverter from '@/pages/StringConverter.vue'
+import UnixTimestamp from '@/pages/UnixTimestamp.vue'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
       name: 'home',
-      component: () => import('@/pages/index.vue'),
+      component: Home,
     },
     {
       path: '/image-processing',
       name: 'image-processing',
-      component: () => import('@/pages/ImageProcessing.vue'),
+      component: ImageProcessing,
     },
     {
       path: '/unix-timestamp',
       name: 'unix-timestamp',
-      component: () => import('@/pages/UnixTimestamp.vue'),
+      component: UnixTimestamp,
     },
     {
       path: '/string-converter',
       name: 'string-converter',
-      component: () => import('@/pages/StringConverter.vue'),
+      component: StringConverter,
     },
   ],
 })
