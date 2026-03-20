@@ -12,12 +12,48 @@ export type PreviewTarget = {
 }
 
 export function useImagePreview() {
+  const MIN_SCALE = 1 / 128
+  const MAX_SCALE = 128
+  const STEP_FACTORS = [1, 1.25, 1.5] as const
+
   const preview = ref<PreviewTarget | null>(null)
   const scale = ref<number>(1)
   const offset = ref<Point>({ x: 0, y: 0 })
   const isDragging = ref<boolean>(false)
   const dragStart = ref<Point>({ x: 0, y: 0 })
   const offsetStart = ref<Point>({ x: 0, y: 0 })
+
+  function getNextScale(value: number) {
+    const exponent = Math.floor(Math.log2(value))
+
+    for (let exp = exponent - 1; exp <= exponent + 2; exp += 1) {
+      const base = 2 ** exp
+      for (const factor of STEP_FACTORS) {
+        const candidate = base * factor
+        if (candidate > value && candidate >= MIN_SCALE && candidate <= MAX_SCALE) {
+          return candidate
+        }
+      }
+    }
+
+    return MAX_SCALE
+  }
+
+  function getPrevScale(value: number) {
+    const exponent = Math.floor(Math.log2(value))
+
+    for (let exp = exponent + 1; exp >= exponent - 2; exp -= 1) {
+      const base = 2 ** exp
+      for (const factor of [...STEP_FACTORS].reverse()) {
+        const candidate = base * factor
+        if (candidate < value && candidate >= MIN_SCALE && candidate <= MAX_SCALE) {
+          return candidate
+        }
+      }
+    }
+
+    return MIN_SCALE
+  }
 
   const imgStyle = computed(() => ({
     transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
@@ -36,11 +72,11 @@ export function useImagePreview() {
   }
 
   function zoomIn() {
-    scale.value = Math.min(scale.value * 1.25, 128)
+    scale.value = getNextScale(scale.value)
   }
 
   function zoomOut() {
-    scale.value = Math.max(scale.value / 1.25, 1 / 128)
+    scale.value = getPrevScale(scale.value)
   }
 
   function resetZoom() {
@@ -52,7 +88,9 @@ export function useImagePreview() {
   function onWheel(e: WheelEvent) {
     const previousScale = scale.value
     const nextScale =
-      e.deltaY < 0 ? Math.min(previousScale * 1.25, 128) : Math.max(previousScale / 1.25, 1 / 128)
+      e.deltaY < 0
+        ? Math.min(previousScale * 1.25, MAX_SCALE)
+        : Math.max(previousScale / 1.25, MIN_SCALE)
 
     if (nextScale === previousScale) return
 
