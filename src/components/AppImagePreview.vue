@@ -105,6 +105,7 @@ defineExpose({ open })
         >
           <img
             :alt="preview.name"
+            class="max-w-none"
             draggable="false"
             :src="preview.url"
             :style="imgStyle"
