@@ -113,6 +113,14 @@ export function useImagePreview() {
     preview.value = null
   }
 
+  function download() {
+    if (!preview.value) return
+    const anchor = document.createElement('a')
+    anchor.href = preview.value.url
+    anchor.download = preview.value.downloadName
+    anchor.click()
+  }
+
   function zoomIn() {
     scale.value = getNextScale(scale.value)
   }
@@ -121,14 +129,14 @@ export function useImagePreview() {
     scale.value = getPrevScale(scale.value)
   }
 
+  function rotateClockwise() {
+    rotation.value += 90
+  }
+
   function resetView() {
     scale.value = initialScale.value
     offset.value = { x: 0, y: 0 }
     rotation.value = 0
-  }
-
-  function rotateClockwise() {
-    rotation.value += 90
   }
 
   /** 以鼠标位置为中心进行缩放 */
@@ -198,18 +206,11 @@ export function useImagePreview() {
     }
   }
 
-  function download() {
-    if (!preview.value) return
-    const anchor = document.createElement('a')
-    anchor.href = preview.value.url
-    anchor.download = preview.value.downloadName
-    anchor.click()
-  }
-
   return {
     preview,
     scale,
     imgStyle,
+    onImageLoad,
     open,
     close,
     download,
@@ -221,7 +222,6 @@ export function useImagePreview() {
     onMousedown,
     onMousemove,
     onMouseup,
-    onImageLoad,
     onKeydown,
   }
 }

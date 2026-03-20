@@ -6,6 +6,7 @@ const {
   preview,
   scale,
   imgStyle,
+  onImageLoad,
   open,
   close,
   download,
@@ -17,7 +18,6 @@ const {
   onMousedown,
   onMousemove,
   onMouseup,
-  onImageLoad,
   onKeydown,
 } = useImagePreview()
 
