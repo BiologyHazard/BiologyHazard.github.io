@@ -77,6 +77,8 @@ export function useImagePreview() {
       zoomOut()
     } else if (e.key === '0') {
       resetZoom()
+    } else if (e.key === 'o' || e.key === 'O') {
+      if (preview.value) window.open(preview.value.url, '_blank', 'noopener noreferrer')
     } else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
       e.preventDefault()
       download()

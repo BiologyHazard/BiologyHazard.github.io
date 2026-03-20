@@ -67,7 +67,17 @@ defineExpose({ open })
             <UTooltip :kbds="['=']" text="放大">
               <UButton color="neutral" icon="i-lucide-plus" variant="ghost" @click="zoomIn" />
             </UTooltip>
-            <div class="mx-1 h-5 w-px bg-white/20" />
+            <div class="mx-1 h-5 w-px bg-accented" />
+            <UTooltip :kbds="['O']" text="在新标签页中打开图像">
+              <UButton
+                color="neutral"
+                icon="i-lucide-external-link"
+                rel="noopener noreferrer"
+                target="_blank"
+                :to="preview.url"
+                variant="ghost"
+              />
+            </UTooltip>
             <UTooltip :kbds="['meta', 'S']" text="下载">
               <UButton color="neutral" icon="i-lucide-download" variant="ghost" @click="download" />
             </UTooltip>
