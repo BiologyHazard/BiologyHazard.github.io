@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, type CSSProperties } from 'vue'
 
 export type Point = {
   x: number
@@ -15,6 +15,7 @@ export function useImagePreview() {
   const MIN_SCALE = 1 / 128
   const MAX_SCALE = 128
   const STEP_FACTORS = [1, 1.25, 1.5] as const
+  const PIXELATED_SCALE_THRESHOLD = 4
 
   const preview = ref<PreviewTarget | null>(null)
   const scale = ref<number>(1)
@@ -55,10 +56,11 @@ export function useImagePreview() {
     return MIN_SCALE
   }
 
-  const imgStyle = computed(() => ({
+  const imgStyle = computed<CSSProperties>(() => ({
     transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
     cursor: isDragging.value ? 'grabbing' : 'grab',
     transition: isDragging.value ? 'none' : 'transform 0.15s ease',
+    imageRendering: scale.value >= PIXELATED_SCALE_THRESHOLD ? 'pixelated' : 'auto',
   }))
 
   function open(target: PreviewTarget) {
