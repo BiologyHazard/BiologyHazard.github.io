@@ -7,7 +7,7 @@ const items = computed(() => [
     to: '/',
   },
   {
-    label: '图片压缩',
+    label: '图片处理',
     to: '/image-processing',
   },
   {

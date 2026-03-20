@@ -375,7 +375,7 @@ async function exportToFolder(): Promise<void> {
 
   const readyItems = imageItems.value.filter((item) => item.result)
   if (!readyItems.length) {
-    errorMessage.value = '没有可导出的压缩图片。'
+    errorMessage.value = '没有可导出的处理结果图片。'
     return
   }
 
@@ -431,8 +431,8 @@ function openPreview(target: PreviewTarget) {
   <UContainer>
     <UPage>
       <UPageHeader
-        description="上传图片后可自定义质量与分辨率，再一键压缩并下载 WebP 文件。"
-        title="图片压缩为 WebP"
+        description="上传图片后可自定义质量与分辨率，一键处理并下载。"
+        title="图片压缩与格式转换"
       />
 
       <UPageBody>
@@ -539,7 +539,7 @@ function openPreview(target: PreviewTarget) {
                   :loading="isCompressing"
                   @click="compressToImages"
                 >
-                  {{ isCompressing ? '批量压缩中...' : '开始批量压缩' }}
+                  {{ isCompressing ? '批量处理中...' : '开始批量处理' }}
                 </UButton>
                 <UButton
                   color="primary"
@@ -622,7 +622,7 @@ function openPreview(target: PreviewTarget) {
                         </div>
                       </div>
 
-                      <!-- 压缩结果缩略图 -->
+                      <!-- 处理结果缩略图 -->
                       <div
                         class="group relative flex aspect-square items-center justify-center overflow-hidden rounded-md border border-accented"
                         :class="item.result?.url ? 'cursor-zoom-in' : ''"
@@ -639,7 +639,7 @@ function openPreview(target: PreviewTarget) {
                       >
                         <img
                           v-if="item.result?.url"
-                          alt="压缩结果预览"
+                          alt="处理结果预览"
                           class="h-full w-full object-contain transition-opacity group-hover:opacity-30"
                           :src="item.result.url"
                         />
@@ -692,14 +692,14 @@ function openPreview(target: PreviewTarget) {
               <UAlert
                 v-else
                 color="neutral"
-                description="请先选择一张或多张图片进行预览和压缩。"
+                description="请先选择一张或多张图片进行预览和处理。"
                 variant="outline"
               />
 
               <UCard variant="subtle">
                 <div class="space-y-1 text-sm">
                   <p class="text-toned">
-                    已压缩数量：<span class="font-semibold"
+                    已处理数量：<span class="font-semibold"
                       >{{ processedCount }} / {{ validImageCount }}</span
                     >
                   </p>
