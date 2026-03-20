@@ -90,7 +90,7 @@ export function useImagePreview() {
   }
 
   function rotateClockwise() {
-    rotation.value = (rotation.value + 90) % 360
+    rotation.value += 90
   }
 
   /** 以鼠标位置为中心进行缩放 */
