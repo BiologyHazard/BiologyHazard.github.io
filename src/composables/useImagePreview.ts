@@ -31,11 +31,11 @@ export function useImagePreview() {
   }
 
   function zoomIn() {
-    scale.value = Math.min(scale.value * 1.25, 8)
+    scale.value = Math.min(scale.value * 1.25, 128)
   }
 
   function zoomOut() {
-    scale.value = Math.max(scale.value / 1.25, 0.125)
+    scale.value = Math.max(scale.value / 1.25, 1 / 128)
   }
 
   function resetZoom() {
