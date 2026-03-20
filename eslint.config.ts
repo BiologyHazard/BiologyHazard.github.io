@@ -28,7 +28,7 @@ const eslintConfig = defineConfigWithVueTs(
         'warn',
         {
           alphabetical: true,
-          sortLineLength: true,
+          sortLineLength: false,
           ignoreVBindObject: false,
         },
       ],

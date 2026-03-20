@@ -34,20 +34,20 @@ defineExpose({ open })
 <template>
   <Teleport to="body">
     <Transition
-      leave-to-class="opacity-0"
-      enter-from-class="opacity-0"
       enter-active-class="transition-opacity duration-200"
+      enter-from-class="opacity-0"
       leave-active-class="transition-opacity duration-150"
+      leave-to-class="opacity-0"
     >
       <div
         v-if="preview"
         ref="overlayRef"
-        tabindex="0"
         class="fixed inset-0 z-50 flex flex-col bg-black/92 outline-none"
+        tabindex="0"
         @keydown="onKeydown"
-        @mouseup="onMouseup"
         @mouseleave="onMouseup"
         @mousemove="onMousemove"
+        @mouseup="onMouseup"
       >
         <!-- 顶部工具栏 -->
         <div class="flex shrink-0 items-center justify-between gap-4 bg-black/40 px-4 py-2">
@@ -55,46 +55,46 @@ defineExpose({ open })
           <div class="flex shrink-0 items-center gap-1">
             <UTooltip text="缩小 (-)">
               <UButton
-                color="neutral"
-                variant="ghost"
-                icon="i-lucide-zoom-out"
                 class="text-white hover:bg-white/15"
+                color="neutral"
+                icon="i-lucide-zoom-out"
+                variant="ghost"
                 @click="zoomOut"
               />
             </UTooltip>
             <UButton
+              class="min-w-16 text-sm text-white hover:bg-white/15"
               color="neutral"
               variant="ghost"
-              class="min-w-16 text-sm text-white hover:bg-white/15"
               @click="resetZoom"
             >
               {{ Math.round(scale * 100) }}%
             </UButton>
             <UTooltip text="放大 (+)">
               <UButton
-                color="neutral"
-                variant="ghost"
-                icon="i-lucide-zoom-in"
                 class="text-white hover:bg-white/15"
+                color="neutral"
+                icon="i-lucide-zoom-in"
+                variant="ghost"
                 @click="zoomIn"
               />
             </UTooltip>
             <div class="mx-1 h-5 w-px bg-white/20" />
             <UTooltip text="下载">
               <UButton
-                color="neutral"
-                variant="ghost"
-                icon="i-lucide-download"
                 class="text-white hover:bg-white/15"
+                color="neutral"
+                icon="i-lucide-download"
+                variant="ghost"
                 @click="download"
               />
             </UTooltip>
             <UTooltip text="关闭 (Esc)">
               <UButton
-                color="neutral"
-                variant="ghost"
-                icon="i-lucide-x"
                 class="text-white hover:bg-white/15"
+                color="neutral"
+                icon="i-lucide-x"
+                variant="ghost"
                 @click="close"
               />
             </UTooltip>
@@ -108,11 +108,11 @@ defineExpose({ open })
           @wheel.prevent="onWheel"
         >
           <img
-            draggable="false"
-            :style="imgStyle"
-            :src="preview.url"
             :alt="preview.name"
             class="max-h-full max-w-full object-contain"
+            draggable="false"
+            :src="preview.url"
+            :style="imgStyle"
             @mousedown="onMousedown"
           />
         </div>

@@ -111,10 +111,10 @@ const { copy: copyUTCMs, copied: copiedUTCMs } = useClipboard({ copiedDuring: CO
                 <span class="w-32 shrink-0 text-sm text-muted">秒（整数）</span>
                 <span class="font-mono tabular-nums">{{ resultSecInteger }}</span>
                 <UButton
-                  size="xs"
-                  variant="ghost"
                   :color="copiedSec ? 'success' : 'neutral'"
                   :icon="copiedSec ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  size="xs"
+                  variant="ghost"
                   @click="copySec(resultSecInteger)"
                 />
               </div>
@@ -122,10 +122,10 @@ const { copy: copyUTCMs, copied: copiedUTCMs } = useClipboard({ copiedDuring: CO
                 <span class="w-32 shrink-0 text-sm text-muted">秒（浮点）</span>
                 <span class="font-mono tabular-nums">{{ resultSecFloat }}</span>
                 <UButton
-                  size="xs"
-                  variant="ghost"
                   :color="copiedSecf ? 'success' : 'neutral'"
                   :icon="copiedSecf ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  size="xs"
+                  variant="ghost"
                   @click="copySecf(resultSecFloat)"
                 />
               </div>
@@ -133,10 +133,10 @@ const { copy: copyUTCMs, copied: copiedUTCMs } = useClipboard({ copiedDuring: CO
                 <span class="w-32 shrink-0 text-sm text-muted">毫秒（整数）</span>
                 <span class="font-mono tabular-nums">{{ resultMs }}</span>
                 <UButton
-                  size="xs"
-                  variant="ghost"
                   :color="copiedMs ? 'success' : 'neutral'"
                   :icon="copiedMs ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  size="xs"
+                  variant="ghost"
                   @click="copyMs(resultMs)"
                 />
               </div>
@@ -145,10 +145,10 @@ const { copy: copyUTCMs, copied: copiedUTCMs } = useClipboard({ copiedDuring: CO
                 <span class="w-32 shrink-0 text-sm text-muted">日期时间</span>
                 <span class="font-mono tabular-nums">{{ resultDateSec }}</span>
                 <UButton
-                  size="xs"
-                  variant="ghost"
                   :color="copiedDate ? 'success' : 'neutral'"
                   :icon="copiedDate ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  size="xs"
+                  variant="ghost"
                   @click="copyDate(resultDateSec)"
                 />
               </div>
@@ -156,10 +156,10 @@ const { copy: copyUTCMs, copied: copiedUTCMs } = useClipboard({ copiedDuring: CO
                 <span class="w-32 shrink-0 text-sm text-muted">日期时间（ms）</span>
                 <span class="font-mono tabular-nums">{{ resultDateMs }}</span>
                 <UButton
-                  size="xs"
-                  variant="ghost"
                   :color="copiedDateMs ? 'success' : 'neutral'"
                   :icon="copiedDateMs ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  size="xs"
+                  variant="ghost"
                   @click="copyDateMs(resultDateMs)"
                 />
               </div>
@@ -168,10 +168,10 @@ const { copy: copyUTCMs, copied: copiedUTCMs } = useClipboard({ copiedDuring: CO
                 <span class="w-32 shrink-0 text-sm text-muted">本地（带时区）</span>
                 <span class="font-mono tabular-nums">{{ resultDateLocalTZ }}</span>
                 <UButton
-                  size="xs"
-                  variant="ghost"
                   :color="copiedLocalTZ ? 'success' : 'neutral'"
                   :icon="copiedLocalTZ ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  size="xs"
+                  variant="ghost"
                   @click="copyLocalTZ(resultDateLocalTZ)"
                 />
               </div>
@@ -179,10 +179,10 @@ const { copy: copyUTCMs, copied: copiedUTCMs } = useClipboard({ copiedDuring: CO
                 <span class="w-32 shrink-0 text-sm text-muted">本地（带时区 ms）</span>
                 <span class="font-mono tabular-nums">{{ resultDateLocalTZMs }}</span>
                 <UButton
-                  size="xs"
-                  variant="ghost"
                   :color="copiedLocalTZMs ? 'success' : 'neutral'"
                   :icon="copiedLocalTZMs ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  size="xs"
+                  variant="ghost"
                   @click="copyLocalTZMs(resultDateLocalTZMs)"
                 />
               </div>
@@ -190,10 +190,10 @@ const { copy: copyUTCMs, copied: copiedUTCMs } = useClipboard({ copiedDuring: CO
                 <span class="w-32 shrink-0 text-sm text-muted">UTC</span>
                 <span class="font-mono tabular-nums">{{ resultDateUTC }}</span>
                 <UButton
-                  size="xs"
-                  variant="ghost"
                   :color="copiedUTC ? 'success' : 'neutral'"
                   :icon="copiedUTC ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  size="xs"
+                  variant="ghost"
                   @click="copyUTC(resultDateUTC)"
                 />
               </div>
@@ -201,16 +201,16 @@ const { copy: copyUTCMs, copied: copiedUTCMs } = useClipboard({ copiedDuring: CO
                 <span class="w-32 shrink-0 text-sm text-muted">UTC（ms）</span>
                 <span class="font-mono tabular-nums">{{ resultDateUTCMs }}</span>
                 <UButton
-                  size="xs"
-                  variant="ghost"
                   :color="copiedUTCMs ? 'success' : 'neutral'"
                   :icon="copiedUTCMs ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  size="xs"
+                  variant="ghost"
                   @click="copyUTCMs(resultDateUTCMs)"
                 />
               </div>
             </div>
 
-            <UAlert v-else color="error" variant="subtle" :description="parseResult.error" />
+            <UAlert v-else color="error" :description="parseResult.error" variant="subtle" />
           </div>
         </UCard>
       </UPageBody>

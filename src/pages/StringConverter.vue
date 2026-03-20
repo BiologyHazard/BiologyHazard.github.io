@@ -58,18 +58,18 @@ function swap() {
 <template>
   <UContainer class="max-w-2xl">
     <UPage>
-      <UPageHeader title="字符串转义工具" description="支持 JSON 字符串转义和 URL 编码/解码" />
+      <UPageHeader description="支持 JSON 字符串转义和 URL 编码/解码" title="字符串转义工具" />
 
       <UPageBody>
         <div class="space-y-6">
           <UFormField label="输入">
             <UTextarea
               v-model="input"
+              autoresize
+              class="w-full font-mono"
+              placeholder="在此输入内容..."
               :rows="6"
               size="lg"
-              autoresize
-              placeholder="在此输入内容..."
-              class="w-full font-mono"
             />
           </UFormField>
 
@@ -80,25 +80,25 @@ function swap() {
             </UFieldGroup>
 
             <UFieldGroup orientation="horizontal">
-              <UButton label="URL 编码" color="neutral" variant="subtle" @click="urlEncode" />
-              <UButton label="URL 解码" color="neutral" variant="subtle" @click="urlDecode" />
+              <UButton color="neutral" label="URL 编码" variant="subtle" @click="urlEncode" />
+              <UButton color="neutral" label="URL 解码" variant="subtle" @click="urlDecode" />
             </UFieldGroup>
 
             <div class="grow" />
 
             <div class="flex gap-2">
               <UButton
-                label="上下调换"
                 color="neutral"
-                variant="ghost"
                 icon="i-heroicons-arrows-up-down"
+                label="上下调换"
+                variant="ghost"
                 @click="swap"
               />
               <UButton
-                label="清空"
                 color="error"
-                variant="ghost"
                 icon="i-heroicons-trash"
+                label="清空"
+                variant="ghost"
                 @click="clear"
               />
             </div>
@@ -109,26 +109,26 @@ function swap() {
               <div class="flex w-full items-center justify-between">
                 <span>输出</span>
                 <UButton
-                  size="xs"
-                  variant="link"
                   color="primary"
                   :icon="copied ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  size="xs"
+                  variant="link"
                   @click="copyOutput"
                 />
               </div>
             </template>
             <UTextarea
               v-model="output"
-              readonly
-              :rows="6"
-              size="lg"
               autoresize
               class="w-full font-mono"
               placeholder="转换结果将显示在这里..."
+              readonly
+              :rows="6"
+              size="lg"
             />
           </UFormField>
 
-          <UAlert title="功能提示" color="primary" variant="subtle" icon="i-lucide-info">
+          <UAlert color="primary" icon="i-lucide-info" title="功能提示" variant="subtle">
             <template #description>
               <ul class="list-inside list-disc space-y-1">
                 <li>

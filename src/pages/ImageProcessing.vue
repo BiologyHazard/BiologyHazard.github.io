@@ -430,8 +430,8 @@ function openPreview(target: PreviewTarget) {
   <UContainer>
     <UPage>
       <UPageHeader
-        title="图片压缩为 WebP"
         description="上传图片后可自定义质量与分辨率，再一键压缩并下载 WebP 文件。"
+        title="图片压缩为 WebP"
       />
 
       <UPageBody>
@@ -442,14 +442,14 @@ function openPreview(target: PreviewTarget) {
               <UFormField label="选择图片">
                 <UFileUpload
                   v-model="files"
-                  multiple
-                  highlight
-                  layout="list"
                   accept="image/*"
-                  icon="i-lucide-image"
-                  label="拖拽图片到此处，或点击选择"
                   class="min-h-36 w-full"
                   description="支持 SVG、PNG、JPG、GIF、WebP 等图片格式"
+                  highlight
+                  icon="i-lucide-image"
+                  label="拖拽图片到此处，或点击选择"
+                  layout="list"
+                  multiple
                   @update:model-value="handleFileUpdate"
                 />
               </UFormField>
@@ -469,7 +469,7 @@ function openPreview(target: PreviewTarget) {
                 <template #hint>
                   <span class="text-sm font-semibold text-primary">{{ qualityPercent }}</span>
                 </template>
-                <USlider v-model="qualityPercent" :min="0" :step="1" :max="100" />
+                <USlider v-model="qualityPercent" :max="100" :min="0" :step="1" />
               </UFormField>
 
               <UFormField label="分辨率限制方式">
@@ -534,36 +534,36 @@ function openPreview(target: PreviewTarget) {
 
               <div class="flex flex-wrap gap-3">
                 <UButton
-                  :loading="isCompressing"
                   :disabled="!imageItems.length || isCompressing"
+                  :loading="isCompressing"
                   @click="compressToImages"
                 >
                   {{ isCompressing ? '批量压缩中...' : '开始批量压缩' }}
                 </UButton>
                 <UButton
                   color="primary"
-                  variant="outline"
-                  icon="i-lucide-download"
                   :disabled="!processedCount"
+                  icon="i-lucide-download"
+                  variant="outline"
                   @click="downloadAll"
                 >
                   下载全部 ({{ processedCount }})
                 </UButton>
                 <UButton
                   color="success"
-                  variant="outline"
+                  :disabled="!processedCount || isSavingToFolder"
                   icon="i-lucide-save"
                   :loading="isSavingToFolder"
-                  :disabled="!processedCount || isSavingToFolder"
+                  variant="outline"
                   @click="exportToFolder"
                 >
                   {{ isSavingToFolder ? '导出中...' : `导出到文件夹 (${processedCount})` }}
                 </UButton>
                 <UButton
                   color="error"
-                  variant="outline"
-                  icon="i-lucide-trash-2"
                   :disabled="!imageItems.length || isCompressing"
+                  icon="i-lucide-trash-2"
+                  variant="outline"
                   @click="
                     () => {
                       files = []
@@ -578,8 +578,8 @@ function openPreview(target: PreviewTarget) {
               <UAlert
                 v-if="errorMessage"
                 color="error"
-                variant="soft"
                 :description="errorMessage"
+                variant="soft"
               />
             </div>
           </div>
@@ -591,8 +591,8 @@ function openPreview(target: PreviewTarget) {
                 <UCard
                   v-for="item in imageItems"
                   :key="item.id"
-                  variant="subtle"
                   :ui="{ body: 'p-3 sm:p-4' }"
+                  variant="subtle"
                 >
                   <div class="space-y-3">
                     <p class="truncate text-sm font-medium">{{ item.file.name }}</p>
@@ -611,20 +611,20 @@ function openPreview(target: PreviewTarget) {
                       >
                         <img
                           alt="原图预览"
-                          :src="item.sourceUrl"
                           class="h-full w-full object-contain transition-opacity group-hover:opacity-30"
+                          :src="item.sourceUrl"
                         />
                         <div
                           class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
                         >
-                          <UIcon name="i-lucide-zoom-in" class="size-8 drop-shadow-md" />
+                          <UIcon class="size-8 drop-shadow-md" name="i-lucide-zoom-in" />
                         </div>
                       </div>
 
                       <!-- 压缩结果缩略图 -->
                       <div
-                        :class="item.result?.url ? 'cursor-zoom-in' : ''"
                         class="group relative flex aspect-square items-center justify-center overflow-hidden rounded-md border border-accented"
+                        :class="item.result?.url ? 'cursor-zoom-in' : ''"
                         @click="
                           item.result?.url &&
                           openPreview({
@@ -639,15 +639,15 @@ function openPreview(target: PreviewTarget) {
                         <img
                           v-if="item.result?.url"
                           alt="压缩结果预览"
-                          :src="item.result.url"
                           class="h-full w-full object-contain transition-opacity group-hover:opacity-30"
+                          :src="item.result.url"
                         />
                         <span v-else class="text-sm text-toned">未生成</span>
                         <div
                           v-if="item.result?.url"
                           class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
                         >
-                          <UIcon name="i-lucide-zoom-in" class="size-8 drop-shadow-md" />
+                          <UIcon class="size-8 drop-shadow-md" name="i-lucide-zoom-in" />
                         </div>
                       </div>
                     </div>
@@ -681,8 +681,8 @@ function openPreview(target: PreviewTarget) {
                     <UAlert
                       v-if="item.error"
                       color="error"
-                      variant="soft"
                       :description="item.error"
+                      variant="soft"
                     />
                   </div>
                 </UCard>
@@ -691,8 +691,8 @@ function openPreview(target: PreviewTarget) {
               <UAlert
                 v-else
                 color="neutral"
-                variant="outline"
                 description="请先选择一张或多张图片进行预览和压缩。"
+                variant="outline"
               />
 
               <UCard variant="subtle">

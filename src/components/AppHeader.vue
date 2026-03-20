@@ -24,15 +24,15 @@ const items = computed(() => [
 <template>
   <UHeader>
     <template #left>
-      <UButton to="/" class="p-1.5" color="neutral" variant="ghost">
-        <img alt="Logo" src="/biohazard.svg" class="h-6 w-auto shrink-0" />
+      <UButton class="p-1.5" color="neutral" to="/" variant="ghost">
+        <img alt="Logo" class="h-6 w-auto shrink-0" src="/biohazard.svg" />
       </UButton>
     </template>
 
     <UNavigationMenu :items="items" variant="link" />
 
     <template #body>
-      <UNavigationMenu :items="items" variant="pill" orientation="vertical" />
+      <UNavigationMenu :items="items" orientation="vertical" variant="pill" />
     </template>
 
     <template #right>
