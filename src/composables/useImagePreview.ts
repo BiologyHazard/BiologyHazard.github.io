@@ -1,3 +1,4 @@
+import { useDevicePixelRatio } from '@vueuse/core'
 import { computed, ref, type CSSProperties } from 'vue'
 
 export type Point = {
@@ -20,6 +21,7 @@ export function useImagePreview() {
   const preview = ref<PreviewTarget | null>(null)
   const scale = ref<number>(1)
   const initialScale = ref<number>(1)
+  const { pixelRatio } = useDevicePixelRatio()
   const rotation = ref<number>(0)
   const offset = ref<Point>({ x: 0, y: 0 })
   const isDragging = ref<boolean>(false)
@@ -74,8 +76,9 @@ export function useImagePreview() {
 
     if (!containerWidth || !containerHeight) return
 
-    const fitScale = Math.min(containerWidth / naturalWidth, containerHeight / naturalHeight, 1)
-    const normalizedScale = clampScale(fitScale)
+    const fitScale = Math.min(containerWidth / naturalWidth, containerHeight / naturalHeight)
+    const defaultScale = Math.min(fitScale * pixelRatio.value, 1)
+    const normalizedScale = clampScale(defaultScale)
 
     initialScale.value = normalizedScale
     scale.value = normalizedScale
@@ -94,7 +97,7 @@ export function useImagePreview() {
   }
 
   const imgStyle = computed<CSSProperties>(() => ({
-    transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value}) rotate(${rotation.value}deg)`,
+    transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value / pixelRatio.value}) rotate(${rotation.value}deg)`,
     cursor: isDragging.value ? 'grabbing' : 'grab',
     transition: isDragging.value || isAutoFitting.value ? 'none' : 'transform 0.15s ease',
     imageRendering: scale.value >= PIXELATED_SCALE_THRESHOLD ? 'pixelated' : 'auto',
