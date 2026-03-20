@@ -8,15 +8,16 @@ const {
   imgStyle,
   open,
   close,
+  download,
   zoomIn,
   zoomOut,
-  resetZoom,
+  rotateClockwise,
+  resetView,
   onWheel,
   onMousedown,
   onMousemove,
   onMouseup,
   onKeydown,
-  download,
 } = useImagePreview()
 
 const overlayRef = useTemplateRef('overlayRef')
@@ -60,12 +61,20 @@ defineExpose({ open })
               class="min-w-16 justify-center text-sm"
               color="neutral"
               variant="ghost"
-              @click="resetZoom"
+              @click="resetView"
             >
               {{ Math.round(scale * 100) }}%
             </UButton>
             <UTooltip :kbds="['=']" text="放大">
               <UButton color="neutral" icon="i-lucide-plus" variant="ghost" @click="zoomIn" />
+            </UTooltip>
+            <UTooltip :kbds="['R']" text="顺时针旋转 90°">
+              <UButton
+                color="neutral"
+                icon="i-lucide-rotate-cw"
+                variant="ghost"
+                @click="rotateClockwise"
+              />
             </UTooltip>
             <div class="mx-1 h-5 w-px bg-accented" />
             <UTooltip :kbds="['O']" text="在新标签页中打开图像">
@@ -114,8 +123,9 @@ defineExpose({ open })
           </div>
           缩放 / 拖动 · <UKbd class="text-toned" value="-" /> 缩小 ·
           <UKbd class="text-toned" value="=" /> 放大 ·
+          <UKbd class="text-toned" value="R" /> 顺时针旋转 90° ·
           <UKbd class="text-toned" value="O" /> 新标签页打开 ·
-          <UKbd class="text-toned" value="0" /> 重置缩放 · <UKbd class="text-toned" value="meta" />
+          <UKbd class="text-toned" value="0" /> 重置视图 · <UKbd class="text-toned" value="meta" />
           <UKbd class="text-toned" value="S" /> 保存 ·
           <UKbd class="text-toned" value="escape" /> 关闭
         </div>

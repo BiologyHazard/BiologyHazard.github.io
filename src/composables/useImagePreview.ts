@@ -19,6 +19,7 @@ export function useImagePreview() {
 
   const preview = ref<PreviewTarget | null>(null)
   const scale = ref<number>(1)
+  const rotation = ref<number>(0)
   const offset = ref<Point>({ x: 0, y: 0 })
   const isDragging = ref<boolean>(false)
   const dragStart = ref<Point>({ x: 0, y: 0 })
@@ -57,7 +58,7 @@ export function useImagePreview() {
   }
 
   const imgStyle = computed<CSSProperties>(() => ({
-    transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
+    transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value}) rotate(${rotation.value}deg)`,
     cursor: isDragging.value ? 'grabbing' : 'grab',
     transition: isDragging.value ? 'none' : 'transform 0.15s ease',
     imageRendering: scale.value >= PIXELATED_SCALE_THRESHOLD ? 'pixelated' : 'auto',
@@ -66,6 +67,7 @@ export function useImagePreview() {
   function open(target: PreviewTarget) {
     preview.value = target
     scale.value = 1
+    rotation.value = 0
     offset.value = { x: 0, y: 0 }
   }
 
@@ -81,9 +83,14 @@ export function useImagePreview() {
     scale.value = getPrevScale(scale.value)
   }
 
-  function resetZoom() {
+  function resetView() {
     scale.value = 1
     offset.value = { x: 0, y: 0 }
+    rotation.value = 0
+  }
+
+  function rotateClockwise() {
+    rotation.value = (rotation.value + 90) % 360
   }
 
   /** 以鼠标位置为中心进行缩放 */
@@ -142,7 +149,9 @@ export function useImagePreview() {
     } else if (e.key === '-') {
       zoomOut()
     } else if (e.key === '0') {
-      resetZoom()
+      resetView()
+    } else if (e.key === 'r' || e.key === 'R') {
+      rotateClockwise()
     } else if (e.key === 'o' || e.key === 'O') {
       if (preview.value) window.open(preview.value.url, '_blank', 'noopener noreferrer')
     } else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
@@ -165,14 +174,15 @@ export function useImagePreview() {
     imgStyle,
     open,
     close,
+    download,
     zoomIn,
     zoomOut,
-    resetZoom,
+    rotateClockwise,
+    resetView,
     onWheel,
     onMousedown,
     onMousemove,
     onMouseup,
     onKeydown,
-    download,
   }
 }
