@@ -24,9 +24,9 @@ const items = computed(() => [
 <template>
   <UHeader>
     <template #left>
-      <RouterLink to="/">
-        <img alt="Logo" class="h-6 w-auto shrink-0" src="@/assets/images/白鸥.webp" />
-      </RouterLink>
+      <UButton to="/" class="p-1.5" color="neutral" variant="ghost">
+        <img alt="Logo" src="/biohazard.svg" class="h-6 w-auto shrink-0" />
+      </UButton>
     </template>
 
     <UNavigationMenu :items="items" variant="link" />
