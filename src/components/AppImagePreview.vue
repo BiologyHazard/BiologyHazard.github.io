@@ -103,18 +103,18 @@ defineExpose({ open })
           />
         </div>
 
-        <!-- 底部提示 -->
+        <!-- 底部悬浮提示 -->
         <div
-          class="flex shrink-0 items-center justify-center gap-1 py-2 text-center text-xs text-dimmed"
+          class="pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-default/70 px-3 py-1.5 text-xs text-muted backdrop-blur"
         >
           <div
-            class="inline-flex h-5 items-center justify-center rounded-sm bg-default px-1 text-xs text-muted ring ring-accented ring-inset"
+            class="inline-flex h-5 items-center justify-center rounded-sm bg-default px-1 text-xs text-toned ring ring-accented ring-inset"
           >
             <UIcon name="i-lucide-mouse" />
           </div>
-          缩放 / 移动 · <UKbd class="text-muted" value="0" /> 重置 ·
-          <UKbd class="text-muted" value="meta" /> <UKbd class="text-muted" value="S" /> 保存 ·
-          <UKbd class="text-muted" value="escape" /> 关闭
+          缩放 / 移动 · <UKbd class="text-toned" value="0" /> 重置 ·
+          <UKbd class="text-toned" value="meta" /> <UKbd class="text-toned" value="S" /> 保存 ·
+          <UKbd class="text-toned" value="escape" /> 关闭
         </div>
       </div>
     </Transition>
