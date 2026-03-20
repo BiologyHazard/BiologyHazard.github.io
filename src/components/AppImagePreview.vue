@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { watch, nextTick, useTemplateRef } from 'vue'
 import { useImagePreview } from '@/composables/useImagePreview'
 
 const {
@@ -19,7 +19,7 @@ const {
   download,
 } = useImagePreview()
 
-const overlayRef = ref<HTMLDivElement | null>(null)
+const overlayRef = useTemplateRef('overlayRef')
 
 watch(preview, async (value) => {
   if (value) {
