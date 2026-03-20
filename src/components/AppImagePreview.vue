@@ -17,6 +17,7 @@ const {
   onMousedown,
   onMousemove,
   onMouseup,
+  onImageLoad,
   onKeydown,
 } = useImagePreview()
 
@@ -107,6 +108,7 @@ defineExpose({ open })
             draggable="false"
             :src="preview.url"
             :style="imgStyle"
+            @load="onImageLoad"
             @mousedown="onMousedown"
           />
         </div>

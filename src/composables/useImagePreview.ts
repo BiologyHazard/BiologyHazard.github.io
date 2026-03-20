@@ -19,9 +19,11 @@ export function useImagePreview() {
 
   const preview = ref<PreviewTarget | null>(null)
   const scale = ref<number>(1)
+  const initialScale = ref<number>(1)
   const rotation = ref<number>(0)
   const offset = ref<Point>({ x: 0, y: 0 })
   const isDragging = ref<boolean>(false)
+  const isAutoFitting = ref<boolean>(false)
   const dragStart = ref<Point>({ x: 0, y: 0 })
   const offsetStart = ref<Point>({ x: 0, y: 0 })
 
@@ -57,15 +59,51 @@ export function useImagePreview() {
     return MIN_SCALE
   }
 
+  function clampScale(value: number) {
+    return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value))
+  }
+
+  function fitScaleToContainer(container: HTMLElement, image: HTMLImageElement) {
+    const naturalWidth = image.naturalWidth
+    const naturalHeight = image.naturalHeight
+
+    if (!naturalWidth || !naturalHeight) return
+
+    const containerWidth = container.clientWidth
+    const containerHeight = container.clientHeight
+
+    if (!containerWidth || !containerHeight) return
+
+    const fitScale = Math.min(containerWidth / naturalWidth, containerHeight / naturalHeight, 1)
+    const normalizedScale = clampScale(fitScale)
+
+    initialScale.value = normalizedScale
+    scale.value = normalizedScale
+    offset.value = { x: 0, y: 0 }
+  }
+
+  function onImageLoad(e: Event) {
+    const image = e.currentTarget as HTMLImageElement | null
+    if (!image) return
+    const container = image.parentElement
+    if (!container) return
+    fitScaleToContainer(container, image)
+    requestAnimationFrame(() => {
+      isAutoFitting.value = false
+    })
+  }
+
   const imgStyle = computed<CSSProperties>(() => ({
     transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value}) rotate(${rotation.value}deg)`,
     cursor: isDragging.value ? 'grabbing' : 'grab',
-    transition: isDragging.value ? 'none' : 'transform 0.15s ease',
+    transition: isDragging.value || isAutoFitting.value ? 'none' : 'transform 0.15s ease',
     imageRendering: scale.value >= PIXELATED_SCALE_THRESHOLD ? 'pixelated' : 'auto',
   }))
 
   function open(target: PreviewTarget) {
     preview.value = target
+    isAutoFitting.value = true
+    initialScale.value = 1
     scale.value = 1
     rotation.value = 0
     offset.value = { x: 0, y: 0 }
@@ -84,7 +122,7 @@ export function useImagePreview() {
   }
 
   function resetView() {
-    scale.value = 1
+    scale.value = initialScale.value
     offset.value = { x: 0, y: 0 }
     rotation.value = 0
   }
@@ -183,6 +221,7 @@ export function useImagePreview() {
     onMousedown,
     onMousemove,
     onMouseup,
+    onImageLoad,
     onKeydown,
   }
 }
