@@ -57,13 +57,13 @@ defineExpose({ open })
               <UButton
                 class="text-white hover:bg-white/15"
                 color="neutral"
-                icon="i-lucide-zoom-out"
+                icon="i-lucide-minus"
                 variant="ghost"
                 @click="zoomOut"
               />
             </UTooltip>
             <UButton
-              class="min-w-16 text-sm text-white hover:bg-white/15"
+              class="min-w-16 justify-center text-sm text-white hover:bg-white/15"
               color="neutral"
               variant="ghost"
               @click="resetZoom"
@@ -74,7 +74,7 @@ defineExpose({ open })
               <UButton
                 class="text-white hover:bg-white/15"
                 color="neutral"
-                icon="i-lucide-zoom-in"
+                icon="i-lucide-plus"
                 variant="ghost"
                 @click="zoomIn"
               />
