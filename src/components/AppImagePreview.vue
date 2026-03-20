@@ -117,20 +117,41 @@ defineExpose({ open })
 
         <!-- 底部悬浮提示 -->
         <div
-          class="pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-default/70 px-3 py-1.5 text-xs text-muted backdrop-blur"
+          class="pointer-events-none absolute bottom-4 left-1/2 hidden -translate-x-1/2 flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl bg-default/75 px-3 py-1.5 text-xs text-muted backdrop-blur lg:flex"
         >
-          <div
-            class="inline-flex h-5 items-center justify-center rounded-sm bg-default px-1 text-xs text-toned ring ring-accented ring-inset"
-          >
-            <UIcon name="i-lucide-mouse" />
-          </div>
-          缩放 / 拖动 · <UKbd class="text-toned" value="-" /> 缩小 ·
-          <UKbd class="text-toned" value="=" /> 放大 ·
-          <UKbd class="text-toned" value="R" /> 顺时针旋转 90° ·
-          <UKbd class="text-toned" value="O" /> 新标签页打开 ·
-          <UKbd class="text-toned" value="0" /> 重置视图 · <UKbd class="text-toned" value="meta" />
-          <UKbd class="text-toned" value="S" /> 保存 ·
-          <UKbd class="text-toned" value="escape" /> 关闭
+          <span class="inline-flex items-center gap-1">
+            <div
+              class="inline-flex h-5 items-center justify-center rounded-sm bg-default px-1 text-toned ring ring-accented ring-inset"
+            >
+              <UIcon name="i-lucide-mouse" />
+            </div>
+            缩放 / 移动
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <UKbd class="text-toned" value="-" />
+            / <UKbd class="text-toned" value="=" />
+            缩放
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <UKbd class="text-toned" value="R" />
+            旋转
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <UKbd class="text-toned" value="O" />
+            新标签页打开
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <UKbd class="text-toned" value="0" />
+            重置视图
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <UKbd class="text-toned" value="meta" /> + <UKbd class="text-toned" value="S" />
+            下载
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <UKbd class="text-toned" value="esc" />
+            关闭
+          </span>
         </div>
       </div>
     </Transition>
