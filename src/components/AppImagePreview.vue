@@ -112,8 +112,11 @@ defineExpose({ open })
           >
             <UIcon name="i-lucide-mouse" />
           </div>
-          缩放 / 移动 · <UKbd class="text-toned" value="0" /> 重置 ·
-          <UKbd class="text-toned" value="meta" /> <UKbd class="text-toned" value="S" /> 保存 ·
+          缩放 / 拖动 · <UKbd class="text-toned" value="-" /> 缩小 ·
+          <UKbd class="text-toned" value="=" /> 放大 ·
+          <UKbd class="text-toned" value="O" /> 新标签页打开 ·
+          <UKbd class="text-toned" value="0" /> 重置缩放 · <UKbd class="text-toned" value="meta" />
+          <UKbd class="text-toned" value="S" /> 保存 ·
           <UKbd class="text-toned" value="escape" /> 关闭
         </div>
       </div>
