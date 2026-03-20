@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, useTemplateRef } from 'vue'
 import AppImagePreview from '@/components/AppImagePreview.vue'
 import type { PreviewTarget } from '@/composables/useImagePreview'
 
@@ -419,7 +419,7 @@ onBeforeUnmount(() => {
   clearAllItems()
 })
 
-const imagePreviewRef = ref<InstanceType<typeof AppImagePreview>>()
+const imagePreviewRef = useTemplateRef('imagePreviewRef')
 
 function openPreview(target: PreviewTarget) {
   imagePreviewRef.value?.open(target)
@@ -427,6 +427,7 @@ function openPreview(target: PreviewTarget) {
 </script>
 
 <template>
+  <AppImagePreview ref="imagePreviewRef" />
   <UContainer>
     <UPage>
       <UPageHeader
@@ -715,7 +716,5 @@ function openPreview(target: PreviewTarget) {
         </div>
       </UPageBody>
     </UPage>
-
-    <AppImagePreview ref="imagePreviewRef" />
   </UContainer>
 </template>

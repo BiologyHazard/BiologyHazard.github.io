@@ -69,10 +69,18 @@ export function useImagePreview() {
   }
 
   function onKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') close()
-    else if (e.key === '+' || e.key === '=') zoomIn()
-    else if (e.key === '-') zoomOut()
-    else if (e.key === '0') resetZoom()
+    if (e.key === 'Escape') {
+      close()
+    } else if (e.key === '+' || e.key === '=') {
+      zoomIn()
+    } else if (e.key === '-') {
+      zoomOut()
+    } else if (e.key === '0') {
+      resetZoom()
+    } else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault()
+      download()
+    }
   }
 
   function download() {
