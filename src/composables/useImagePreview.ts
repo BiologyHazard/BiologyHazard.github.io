@@ -43,10 +43,31 @@ export function useImagePreview() {
     offset.value = { x: 0, y: 0 }
   }
 
+  /** 以鼠标位置为中心进行缩放 */
   function onWheel(e: WheelEvent) {
-    e.preventDefault()
-    if (e.deltaY < 0) zoomIn()
-    else zoomOut()
+    const previousScale = scale.value
+    const nextScale =
+      e.deltaY < 0 ? Math.min(previousScale * 1.25, 128) : Math.max(previousScale / 1.25, 1 / 128)
+
+    if (nextScale === previousScale) return
+
+    const container = e.currentTarget as HTMLElement | null
+
+    if (!container) {
+      scale.value = nextScale
+      return
+    }
+
+    const rect = container.getBoundingClientRect()
+    const pointerX = e.clientX - (rect.left + rect.width / 2)
+    const pointerY = e.clientY - (rect.top + rect.height / 2)
+    const ratio = nextScale / previousScale
+
+    offset.value = {
+      x: pointerX - (pointerX - offset.value.x) * ratio,
+      y: pointerY - (pointerY - offset.value.y) * ratio,
+    }
+    scale.value = nextScale
   }
 
   function onMousedown(e: MouseEvent) {
