@@ -36,6 +36,10 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   const ROTATE_SPEED = 90
   /** 按住 Shift 键时的旋转速度倍数 */
   const ROTATE_FAST_MULTIPLIER = 2
+  /** 缩放速度，单位为缩放倍数/秒 */
+  const ZOOM_SPEED = 2
+  /** 按住 Shift 键时的缩放速度倍数 */
+  const ZOOM_FAST_MULTIPLIER = 4
 
   /** 当前预览图像 */
   const preview = ref<PreviewTarget | null>(null)
@@ -74,6 +78,10 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     arrowright: keyArrowRight,
     q: keyQ,
     e: keyE,
+    '[': keyBracketLeft,
+    ']': keyBracketRight,
+    '{': keyBraceLeft,
+    '}': keyBraceRight,
   } = useMagicKeys()
 
   /** 是否应该执行平移动画 */
@@ -89,6 +97,12 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     return getRotateDirection() !== 0
   })
 
+  /** 是否应该执行缩放动画 */
+  const shouldZoom = computed(() => {
+    if (!preview.value) return false
+    return getZoomDirection() !== 0
+  })
+
   /** 获取平移方向，x 和 y 的值分别表示水平方向和垂直方向，-1 表示向左或向上，1 表示向右或向下，0 表示不移动 */
   function getPanDirection(): { x: number; y: number } {
     return {
@@ -102,6 +116,14 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     return Number(keyQ?.value) - Number(keyE?.value)
   }
 
+  /** 获取缩放方向，-1 表示缩小，1 表示放大，0 表示不缩放 */
+  function getZoomDirection(): number {
+    return (
+      Number(keyBracketRight?.value || keyBraceRight?.value) -
+      Number(keyBracketLeft?.value || keyBraceLeft?.value)
+    )
+  }
+
   /** 执行动画步骤 */
   function animateStep(timestamp: number): void {
     if (animateLastTimestamp.value === null) {
@@ -111,13 +133,15 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     const deltaSeconds = (timestamp - animateLastTimestamp.value) / 1000
     animateLastTimestamp.value = timestamp
 
-    const panDirection = getPanDirection()
+    const { x: panX, y: panY } = getPanDirection()
     const rotateDirection = getRotateDirection()
+    const zoomDirection = getZoomDirection()
 
-    if (panDirection.x || panDirection.y) {
-      const magnitude = Math.hypot(panDirection.x, panDirection.y) || 1
-      const unitX = panDirection.x / magnitude
-      const unitY = panDirection.y / magnitude
+    // 平移
+    if (panX !== 0 || panY !== 0) {
+      const magnitude = Math.hypot(panX, panY) || 1
+      const unitX = panX / magnitude
+      const unitY = panY / magnitude
 
       offset.value = {
         x:
@@ -129,12 +153,21 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
       }
     }
 
+    // 旋转
     if (rotateDirection) {
       rotation.value +=
         rotateDirection *
         ROTATE_SPEED *
         (keyShift?.value ? ROTATE_FAST_MULTIPLIER : 1) *
         deltaSeconds
+    }
+
+    // 缩放
+    if (zoomDirection) {
+      const zoomFactor =
+        (ZOOM_SPEED * (keyShift?.value ? ZOOM_FAST_MULTIPLIER : 1)) **
+        (zoomDirection * deltaSeconds)
+      scale.value = clampScale(scale.value * zoomFactor)
     }
   }
 
@@ -181,7 +214,9 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
       if (!shouldRotate.value) {
         transitionParts.push('rotate 0.15s ease')
       }
-      transitionParts.push('scale 0.15s ease')
+      if (!shouldZoom.value) {
+        transitionParts.push('scale 0.15s ease')
+      }
     }
     const transition =
       !isAutoFitting.value && transitionParts.length > 0 ? transitionParts.join(', ') : 'none'
@@ -339,7 +374,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
 
   // 在需要动画时执行动画步骤函数，自动管理动画帧的请求和取消
   useAnimateWhenever(
-    computed(() => Boolean(shouldPan?.value || shouldRotate?.value)),
+    computed(() => Boolean(shouldPan?.value || shouldRotate?.value || shouldZoom?.value)),
     animateStep,
     () => {
       animateLastTimestamp.value = null
