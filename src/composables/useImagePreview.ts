@@ -39,10 +39,10 @@ export function useImagePreview() {
   function getPanDirection() {
     const keys = pressedPanKeys.value
     const x =
-      Number(keys.has('d') || keys.has('arrowright')) -
-      Number(keys.has('a') || keys.has('arrowleft'))
+      Number(keys.has('a') || keys.has('arrowleft')) -
+      Number(keys.has('d') || keys.has('arrowright'))
     const y =
-      Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup'))
+      Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'))
     return { x, y }
   }
 
