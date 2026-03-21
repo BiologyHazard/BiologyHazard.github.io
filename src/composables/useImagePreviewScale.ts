@@ -29,8 +29,8 @@ export interface UseImagePreviewScaleOptions {
  */
 export function useImagePreviewScale(options: UseImagePreviewScaleOptions = {}) {
   const {
-    minScale = 1 / 128,
-    maxScale = 128,
+    minScale = 1 / 1024,
+    maxScale = 1024,
     base = 2,
     coefficients = [1, 1.25, 1.5],
     multiplier = 1.25,
