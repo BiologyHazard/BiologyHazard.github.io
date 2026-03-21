@@ -271,10 +271,18 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   }
 
   /** 恢复图像为初始状态 */
-  function resetView(): void {
+  function resetView(key: string = '0'): void {
     offset.value = { x: 0, y: 0 }
-    rotation.value = 0
-    scale.value = initialScale.value
+
+    // 计算最短旋转路径
+    rotation.value -= ((((rotation.value + 180) % 360) + 360) % 360) - 180
+
+    if (key === '0') {
+      scale.value = initialScale.value
+    } else {
+      const x = Number.parseInt(key)
+      scale.value = clampScale(2 ** (x - 5))
+    }
   }
 
   /** 以鼠标位置为中心进行缩放 */
@@ -353,8 +361,18 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
           zoomOut()
           break
         case '0':
-          resetView()
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9': {
+          resetView(lowerKey)
           break
+        }
         case 'r':
           rotateClockwise()
           break

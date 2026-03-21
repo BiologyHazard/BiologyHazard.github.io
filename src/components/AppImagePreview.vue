@@ -57,7 +57,7 @@ defineExpose({ open })
                 class="min-w-16 justify-center text-sm"
                 color="neutral"
                 variant="ghost"
-                @click="resetView"
+                @click="resetView()"
               >
                 {{ Math.round(scale * 100) }}%
               </UButton>

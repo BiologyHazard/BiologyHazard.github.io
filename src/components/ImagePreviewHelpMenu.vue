@@ -81,6 +81,12 @@
         </div>
       </div>
       <div class="flex items-center justify-between">
+        <span class="text-sm text-toned">缩放至预设大小</span>
+        <div class="flex items-center gap-0.5 text-xs text-toned">
+          <UKbd v-for="x in 9" :key="x" :value="x.toString()" />
+        </div>
+      </div>
+      <div class="flex items-center justify-between">
         <span class="text-sm text-toned">重置视图</span>
         <div class="flex items-center gap-0.5 text-xs text-toned">
           <UKbd value="0" />
