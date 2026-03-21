@@ -4,8 +4,7 @@ import { useDevicePixelRatio, useMagicKeys } from '@vueuse/core'
 import { computed, nextTick, ref, watch } from 'vue'
 
 import { useAnimateWhenever } from '@/composables/useAnimateWhenever'
-
-import { useImagePreviewScale } from './useImagePreviewScale'
+import { useImagePreviewScale } from '@/composables/useImagePreviewScale'
 
 export type Point2D = {
   x: number
@@ -19,31 +18,48 @@ export type PreviewTarget = {
 }
 
 export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
-  const PIXELATED_SCALE_THRESHOLD = 4
-  const PAN_SPEED = 1600
-  const PAN_FAST_MULTIPLIER = 4
-  const ROTATE_SPEED = 90
-  const ROTATE_FAST_MULTIPLIER = 2
   const {
     clampScale,
     getNextScale,
     getPrevScale,
     getNextScaleWithMultiplier,
     getPrevScaleWithMultiplier,
-  } = useImagePreviewScale(1 / 128, 128, 2, [1, 1.25, 1.5], 1.25)
+  } = useImagePreviewScale()
 
+  /** 缩放大于等于此阈值时，让图片使用最近邻居采样 */
+  const PIXELATED_SCALE_THRESHOLD = 4
+  /** 平移速度，单位为像素/秒 */
+  const PAN_SPEED = 1600
+  /** 按住 Shift 键时的平移速度倍数 */
+  const PAN_FAST_MULTIPLIER = 4
+  /** 旋转速度，单位为度/秒 */
+  const ROTATE_SPEED = 90
+  /** 按住 Shift 键时的旋转速度倍数 */
+  const ROTATE_FAST_MULTIPLIER = 2
+
+  /** 当前预览图像 */
   const preview = ref<PreviewTarget | null>(null)
+  /** 图像平移量，单位为 CSS 像素 */
   const offset = ref<Point2D>({ x: 0, y: 0 })
+  /** 图像旋转角度，单位为度 */
   const rotation = ref<number>(0)
+  /** 图像缩放倍数，100% 缩放定义为 1 图像像素 = 1 屏幕像素，注意不是 CSS 像素 */
   const scale = ref<number>(1)
+  /** 图像的初始缩放倍数（依据容器自动计算） */
   const initialScale = ref<number>(1)
 
-  const { pixelRatio } = useDevicePixelRatio()
+  /** 设备像素比，即 1 CSS 像素与 1 屏幕像素的比值 */
+  const pixelRatio = useDevicePixelRatio().pixelRatio
 
+  /** 是否正在自动适应图像 */
   const isAutoFitting = ref<boolean>(false)
+  /** 上一个动画帧的时间戳，需要不断更新 */
   const animateLastTimestamp = ref<number | null>(null)
+  /** 是否正在拖动 */
   const isDragging = ref<boolean>(false)
+  /** 拖动起始位置 */
   const dragStart = ref<Point2D>({ x: 0, y: 0 })
+  /** 拖动起始时的平移量 */
   const offsetStart = ref<Point2D>({ x: 0, y: 0 })
 
   const {
@@ -60,12 +76,14 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     e: keyE,
   } = useMagicKeys()
 
+  /** 是否应该执行平移动画 */
   const shouldPan = computed(() => {
     if (!preview.value) return false
     const { x, y } = getPanDirection()
     return x !== 0 || y !== 0
   })
 
+  /** 是否应该执行旋转动画 */
   const shouldRotate = computed(() => {
     if (!preview.value) return false
     return getRotateDirection() !== 0
@@ -84,6 +102,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     return Number(keyQ?.value) - Number(keyE?.value)
   }
 
+  /** 执行动画步骤 */
   function animateStep(timestamp: number): void {
     if (animateLastTimestamp.value === null) {
       animateLastTimestamp.value = timestamp
@@ -119,6 +138,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     }
   }
 
+  /** 根据容器尺寸自动适应图像缩放 */
   function fitScaleToContainer(container: HTMLElement, image: HTMLImageElement): void {
     const naturalWidth = image.naturalWidth
     const naturalHeight = image.naturalHeight
@@ -139,6 +159,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     offset.value = { x: 0, y: 0 }
   }
 
+  /** 图像加载完成时的回调，根据图像尺寸自动适应屏幕 */
   function onImageLoad(e: Event): void {
     const image = e.currentTarget as HTMLImageElement | null
     if (!image) return
@@ -150,6 +171,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     })
   }
 
+  /** 图像 CSS 样式 */
   const imgStyle = computed<CSSProperties>(() => {
     const transitionParts = []
     if (!isAutoFitting.value) {
@@ -166,14 +188,15 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
 
     return {
       translate: `${offset.value.x}px ${offset.value.y}px`,
-      scale: `${scale.value / pixelRatio.value}`,
       rotate: `${rotation.value}deg`,
-      cursor: isDragging.value ? 'grabbing' : 'grab',
+      scale: `${scale.value / pixelRatio.value}`,
       transition,
+      cursor: isDragging.value ? 'grabbing' : 'grab',
       imageRendering: scale.value >= PIXELATED_SCALE_THRESHOLD ? 'pixelated' : 'auto',
     }
   })
 
+  /** 打开图像预览 */
   function open(target: PreviewTarget): void {
     preview.value = target
     isAutoFitting.value = true
@@ -183,10 +206,12 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     offset.value = { x: 0, y: 0 }
   }
 
+  /** 关闭图像预览 */
   function close(): void {
     preview.value = null
   }
 
+  /** 下载图像 */
   function download(): void {
     if (!preview.value) return
     const anchor = document.createElement('a')
@@ -195,22 +220,26 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     anchor.click()
   }
 
+  /** 放大图像 */
   function zoomIn(): void {
     scale.value = getNextScale(scale.value)
   }
 
+  /** 缩小图像 */
   function zoomOut(): void {
     scale.value = getPrevScale(scale.value)
   }
 
+  /** 顺时针旋转 90° */
   function rotateClockwise(): void {
     rotation.value += 90
   }
 
+  /** 恢复图像为初始状态 */
   function resetView(): void {
-    scale.value = initialScale.value
     offset.value = { x: 0, y: 0 }
     rotation.value = 0
+    scale.value = initialScale.value
   }
 
   /** 以鼠标位置为中心进行缩放 */
@@ -242,6 +271,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     scale.value = nextScale
   }
 
+  /** 鼠标按下时的回调，仅响应左键 */
   function onMousedown(e: MouseEvent): void {
     if (e.button !== 0) return
     isDragging.value = true
@@ -249,6 +279,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     offsetStart.value = { ...offset.value }
   }
 
+  /** 鼠标移动时的回调，更新平移 */
   function onMousemove(e: MouseEvent): void {
     if (!isDragging.value) return
     offset.value = {
@@ -257,10 +288,12 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     }
   }
 
+  /** 鼠标释放时的回调，结束拖动 */
   function onMouseup(): void {
     isDragging.value = false
   }
 
+  /** 键盘按下时的回调，处理一次性快捷键，但不处理持续型快捷键 */
   function onKeydown(e: KeyboardEvent): void {
     const key = e.key.toLowerCase()
 
@@ -296,6 +329,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     }
   }
 
+  // 当开启预览时自动聚焦容器以便接收键盘事件，关闭预览时不需要特别处理，因为组件会被卸载
   watch(preview, async (value) => {
     if (value) {
       await nextTick()
@@ -303,6 +337,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     }
   })
 
+  // 在需要动画时执行动画步骤函数，自动管理动画帧的请求和取消
   useAnimateWhenever(
     computed(() => Boolean(shouldPan?.value || shouldRotate?.value)),
     animateStep,
