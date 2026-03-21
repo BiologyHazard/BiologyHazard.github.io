@@ -5,6 +5,8 @@ import { computed, nextTick, ref, watch } from 'vue'
 
 import { useAnimateWhenever } from '@/composables/useAnimateWhenever'
 
+import { useImagePreviewScale } from './useImagePreviewScale'
+
 export type Point2D = {
   x: number
   y: number
@@ -17,25 +19,33 @@ export type PreviewTarget = {
 }
 
 export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
-  const MIN_SCALE = 1 / 128
-  const MAX_SCALE = 128
-  const STEP_FACTORS = [1, 1.25, 1.5] as const
   const PIXELATED_SCALE_THRESHOLD = 4
   const PAN_SPEED = 1600
   const PAN_FAST_MULTIPLIER = 4
   const ROTATE_SPEED = 90
   const ROTATE_FAST_MULTIPLIER = 2
+  const {
+    clampScale,
+    getNextScale,
+    getPrevScale,
+    getNextScaleWithMultiplier,
+    getPrevScaleWithMultiplier,
+  } = useImagePreviewScale(1 / 128, 128, 2, [1, 1.25, 1.5], 1.25)
 
   const preview = ref<PreviewTarget | null>(null)
+  const offset = ref<Point2D>({ x: 0, y: 0 })
+  const rotation = ref<number>(0)
   const scale = ref<number>(1)
   const initialScale = ref<number>(1)
+
   const { pixelRatio } = useDevicePixelRatio()
-  const rotation = ref<number>(0)
-  const offset = ref<Point2D>({ x: 0, y: 0 })
-  const isDragging = ref<boolean>(false)
+
   const isAutoFitting = ref<boolean>(false)
+  const animateLastTimestamp = ref<number | null>(null)
+  const isDragging = ref<boolean>(false)
   const dragStart = ref<Point2D>({ x: 0, y: 0 })
   const offsetStart = ref<Point2D>({ x: 0, y: 0 })
+
   const {
     shift: keyShift,
     w: keyW,
@@ -49,12 +59,17 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     q: keyQ,
     e: keyE,
   } = useMagicKeys()
+
   const shouldPan = computed(() => {
+    if (!preview.value) return false
     const { x, y } = getPanDirection()
     return x !== 0 || y !== 0
   })
-  const shouldRotate = computed(() => getRotateDirection() !== 0)
-  const animateLastTimestamp = ref<number | null>(null)
+
+  const shouldRotate = computed(() => {
+    if (!preview.value) return false
+    return getRotateDirection() !== 0
+  })
 
   /** 获取平移方向，x 和 y 的值分别表示水平方向和垂直方向，-1 表示向左或向上，1 表示向右或向下，0 表示不移动 */
   function getPanDirection(): { x: number; y: number } {
@@ -102,42 +117,6 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
         (keyShift?.value ? ROTATE_FAST_MULTIPLIER : 1) *
         deltaSeconds
     }
-  }
-
-  function getNextScale(value: number): number {
-    const exponent = Math.floor(Math.log2(value))
-
-    for (let exp = exponent - 1; exp <= exponent + 2; exp += 1) {
-      const base = 2 ** exp
-      for (const factor of STEP_FACTORS) {
-        const candidate = base * factor
-        if (candidate > value && candidate >= MIN_SCALE && candidate <= MAX_SCALE) {
-          return candidate
-        }
-      }
-    }
-
-    return MAX_SCALE
-  }
-
-  function getPrevScale(value: number): number {
-    const exponent = Math.floor(Math.log2(value))
-
-    for (let exp = exponent + 1; exp >= exponent - 2; exp -= 1) {
-      const base = 2 ** exp
-      for (const factor of [...STEP_FACTORS].reverse()) {
-        const candidate = base * factor
-        if (candidate < value && candidate >= MIN_SCALE && candidate <= MAX_SCALE) {
-          return candidate
-        }
-      }
-    }
-
-    return MIN_SCALE
-  }
-
-  function clampScale(value: number): number {
-    return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value))
   }
 
   function fitScaleToContainer(container: HTMLElement, image: HTMLImageElement): void {
@@ -239,8 +218,8 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     const previousScale = scale.value
     const nextScale =
       e.deltaY < 0
-        ? Math.min(previousScale * 1.25, MAX_SCALE)
-        : Math.max(previousScale / 1.25, MIN_SCALE)
+        ? getNextScaleWithMultiplier(previousScale)
+        : getPrevScaleWithMultiplier(previousScale)
 
     if (nextScale === previousScale) return
 
