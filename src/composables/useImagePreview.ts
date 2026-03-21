@@ -330,10 +330,18 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
 
   /** 键盘按下时的回调，处理一次性快捷键，但不处理持续型快捷键 */
   function onKeydown(e: KeyboardEvent): void {
-    const key = e.key.toLowerCase()
+    if (
+      !e.ctrlKey &&
+      !e.metaKey &&
+      ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)
+    ) {
+      e.preventDefault()
+    }
+
+    const lowerKey = e.key.toLowerCase()
 
     if (!e.ctrlKey && !e.metaKey) {
-      switch (key) {
+      switch (lowerKey) {
         case 'escape':
           close()
           break
