@@ -57,7 +57,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   const animateLastTimestamp = ref<number | null>(null)
 
   /** 获取平移方向，x 和 y 的值分别表示水平方向和垂直方向，-1 表示向左或向上，1 表示向右或向下，0 表示不移动 */
-  function getPanDirection() {
+  function getPanDirection(): { x: number; y: number } {
     return {
       x: Number(keyA?.value || keyArrowLeft?.value) - Number(keyD?.value || keyArrowRight?.value),
       y: Number(keyW?.value || keyArrowUp?.value) - Number(keyS?.value || keyArrowDown?.value),
@@ -65,11 +65,11 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   }
 
   /** 获取旋转方向，-1 表示逆时针，1 表示顺时针，0 表示不旋转 */
-  function getRotateDirection() {
+  function getRotateDirection(): number {
     return Number(keyQ?.value) - Number(keyE?.value)
   }
 
-  function animateStep(timestamp: number) {
+  function animateStep(timestamp: number): void {
     if (animateLastTimestamp.value === null) {
       animateLastTimestamp.value = timestamp
     }
@@ -104,7 +104,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     }
   }
 
-  function getNextScale(value: number) {
+  function getNextScale(value: number): number {
     const exponent = Math.floor(Math.log2(value))
 
     for (let exp = exponent - 1; exp <= exponent + 2; exp += 1) {
@@ -120,7 +120,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     return MAX_SCALE
   }
 
-  function getPrevScale(value: number) {
+  function getPrevScale(value: number): number {
     const exponent = Math.floor(Math.log2(value))
 
     for (let exp = exponent + 1; exp >= exponent - 2; exp -= 1) {
@@ -136,11 +136,11 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     return MIN_SCALE
   }
 
-  function clampScale(value: number) {
+  function clampScale(value: number): number {
     return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value))
   }
 
-  function fitScaleToContainer(container: HTMLElement, image: HTMLImageElement) {
+  function fitScaleToContainer(container: HTMLElement, image: HTMLImageElement): void {
     const naturalWidth = image.naturalWidth
     const naturalHeight = image.naturalHeight
 
@@ -160,7 +160,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     offset.value = { x: 0, y: 0 }
   }
 
-  function onImageLoad(e: Event) {
+  function onImageLoad(e: Event): void {
     const image = e.currentTarget as HTMLImageElement | null
     if (!image) return
     const container = image.parentElement
@@ -195,7 +195,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     }
   })
 
-  function open(target: PreviewTarget) {
+  function open(target: PreviewTarget): void {
     preview.value = target
     isAutoFitting.value = true
     initialScale.value = 1
@@ -204,11 +204,11 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     offset.value = { x: 0, y: 0 }
   }
 
-  function close() {
+  function close(): void {
     preview.value = null
   }
 
-  function download() {
+  function download(): void {
     if (!preview.value) return
     const anchor = document.createElement('a')
     anchor.href = preview.value.url
@@ -216,26 +216,26 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     anchor.click()
   }
 
-  function zoomIn() {
+  function zoomIn(): void {
     scale.value = getNextScale(scale.value)
   }
 
-  function zoomOut() {
+  function zoomOut(): void {
     scale.value = getPrevScale(scale.value)
   }
 
-  function rotateClockwise() {
+  function rotateClockwise(): void {
     rotation.value += 90
   }
 
-  function resetView() {
+  function resetView(): void {
     scale.value = initialScale.value
     offset.value = { x: 0, y: 0 }
     rotation.value = 0
   }
 
   /** 以鼠标位置为中心进行缩放 */
-  function onWheel(e: WheelEvent) {
+  function onWheel(e: WheelEvent): void {
     const previousScale = scale.value
     const nextScale =
       e.deltaY < 0
@@ -263,14 +263,14 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     scale.value = nextScale
   }
 
-  function onMousedown(e: MouseEvent) {
+  function onMousedown(e: MouseEvent): void {
     if (e.button !== 0) return
     isDragging.value = true
     dragStart.value = { x: e.clientX, y: e.clientY }
     offsetStart.value = { ...offset.value }
   }
 
-  function onMousemove(e: MouseEvent) {
+  function onMousemove(e: MouseEvent): void {
     if (!isDragging.value) return
     offset.value = {
       x: offsetStart.value.x + e.clientX - dragStart.value.x,
@@ -278,11 +278,11 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     }
   }
 
-  function onMouseup() {
+  function onMouseup(): void {
     isDragging.value = false
   }
 
-  function onKeydown(e: KeyboardEvent) {
+  function onKeydown(e: KeyboardEvent): void {
     const key = e.key.toLowerCase()
 
     if (!e.ctrlKey && !e.metaKey) {
