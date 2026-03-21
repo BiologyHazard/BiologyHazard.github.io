@@ -5,7 +5,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 
 import { useAnimateWhenever } from '@/composables/useAnimateWhenever'
 
-export type Point = {
+export type Point2D = {
   x: number
   y: number
 }
@@ -31,11 +31,11 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   const initialScale = ref<number>(1)
   const { pixelRatio } = useDevicePixelRatio()
   const rotation = ref<number>(0)
-  const offset = ref<Point>({ x: 0, y: 0 })
+  const offset = ref<Point2D>({ x: 0, y: 0 })
   const isDragging = ref<boolean>(false)
   const isAutoFitting = ref<boolean>(false)
-  const dragStart = ref<Point>({ x: 0, y: 0 })
-  const offsetStart = ref<Point>({ x: 0, y: 0 })
+  const dragStart = ref<Point2D>({ x: 0, y: 0 })
+  const offsetStart = ref<Point2D>({ x: 0, y: 0 })
   const {
     shift: keyShift,
     w: keyW,
