@@ -113,7 +113,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
 
   /** 获取旋转方向，-1 表示逆时针，1 表示顺时针，0 表示不旋转 */
   function getRotateDirection(): number {
-    return Number(keyQ?.value) - Number(keyE?.value)
+    return Number(keyE?.value) - Number(keyQ?.value)
   }
 
   /** 获取缩放方向，-1 表示缩小，1 表示放大，0 表示不缩放 */
