@@ -19,6 +19,8 @@ const {
   onMousemove,
   onMouseup,
   onKeydown,
+  onKeyup,
+  onBlur,
 } = useImagePreview()
 
 const overlayRef = useTemplateRef('overlayRef')
@@ -46,7 +48,9 @@ defineExpose({ open })
         ref="overlayRef"
         class="dark fixed inset-0 flex flex-col bg-black/92 outline-none"
         tabindex="0"
+        @blur="onBlur"
         @keydown="onKeydown"
+        @keyup="onKeyup"
         @mouseleave="onMouseup"
         @mousemove="onMousemove"
         @mouseup="onMouseup"
@@ -128,6 +132,20 @@ defineExpose({ open })
             缩放 / 移动
           </span>
           <span class="inline-flex items-center gap-1">
+            <UKbd class="text-toned" value="W" />
+            <UKbd class="text-toned" value="A" />
+            <UKbd class="text-toned" value="S" />
+            <UKbd class="text-toned" value="D" />
+            / <UKbd class="text-toned" value="arrowup" />
+            <UKbd class="text-toned" value="arrowdown" />
+            <UKbd class="text-toned" value="arrowleft" />
+            <UKbd class="text-toned" value="arrowright" />
+            平移
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <UKbd class="text-toned" value="shift" /> + 方向键 / WASD 加速平移
+          </span>
+          <span class="inline-flex items-center gap-1">
             <UKbd class="text-toned" value="-" />
             / <UKbd class="text-toned" value="=" />
             缩放
@@ -152,6 +170,9 @@ defineExpose({ open })
             <UKbd class="text-toned" value="esc" />
             关闭
           </span>
+          <span class="inline-flex items-center gap-1 text-warning"
+            >提示：快捷键请在英文输入状态下使用</span
+          >
         </div>
       </div>
     </Transition>

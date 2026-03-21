@@ -17,6 +17,9 @@ export function useImagePreview() {
   const MAX_SCALE = 128
   const STEP_FACTORS = [1, 1.25, 1.5] as const
   const PIXELATED_SCALE_THRESHOLD = 4
+  const PAN_SPEED = 1600
+  const PAN_FAST_MULTIPLIER = 4
+  const PAN_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'])
 
   const preview = ref<PreviewTarget | null>(null)
   const scale = ref<number>(1)
@@ -28,6 +31,63 @@ export function useImagePreview() {
   const isAutoFitting = ref<boolean>(false)
   const dragStart = ref<Point>({ x: 0, y: 0 })
   const offsetStart = ref<Point>({ x: 0, y: 0 })
+  const pressedPanKeys = ref<Set<string>>(new Set())
+  const isShiftPressed = ref<boolean>(false)
+  const panAnimationFrame = ref<number | null>(null)
+  const panLastTimestamp = ref<number | null>(null)
+
+  function getPanDirection() {
+    const keys = pressedPanKeys.value
+    const x =
+      Number(keys.has('d') || keys.has('arrowright')) -
+      Number(keys.has('a') || keys.has('arrowleft'))
+    const y =
+      Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup'))
+    return { x, y }
+  }
+
+  function startPan() {
+    if (panAnimationFrame.value !== null) return
+    panAnimationFrame.value = requestAnimationFrame(panStep)
+  }
+
+  function stopPan() {
+    if (panAnimationFrame.value !== null) {
+      cancelAnimationFrame(panAnimationFrame.value)
+      panAnimationFrame.value = null
+    }
+    panLastTimestamp.value = null
+  }
+
+  function panStep(timestamp: number) {
+    if (panLastTimestamp.value === null) {
+      panLastTimestamp.value = timestamp
+    }
+
+    const deltaSeconds = (timestamp - panLastTimestamp.value) / 1000
+    panLastTimestamp.value = timestamp
+
+    const direction = getPanDirection()
+    if (!direction.x && !direction.y) {
+      stopPan()
+      return
+    }
+
+    const magnitude = Math.hypot(direction.x, direction.y) || 1
+    const unitX = direction.x / magnitude
+    const unitY = direction.y / magnitude
+
+    offset.value = {
+      x:
+        offset.value.x +
+        unitX * PAN_SPEED * (isShiftPressed.value ? PAN_FAST_MULTIPLIER : 1) * deltaSeconds,
+      y:
+        offset.value.y +
+        unitY * PAN_SPEED * (isShiftPressed.value ? PAN_FAST_MULTIPLIER : 1) * deltaSeconds,
+    }
+
+    panAnimationFrame.value = requestAnimationFrame(panStep)
+  }
 
   function getNextScale(value: number) {
     const exponent = Math.floor(Math.log2(value))
@@ -99,7 +159,10 @@ export function useImagePreview() {
   const imgStyle = computed<CSSProperties>(() => ({
     transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value / pixelRatio.value}) rotate(${rotation.value}deg)`,
     cursor: isDragging.value ? 'grabbing' : 'grab',
-    transition: isDragging.value || isAutoFitting.value ? 'none' : 'transform 0.15s ease',
+    transition:
+      isDragging.value || isAutoFitting.value || panAnimationFrame.value
+        ? 'none'
+        : 'transform 0.15s ease',
     imageRendering: scale.value >= PIXELATED_SCALE_THRESHOLD ? 'pixelated' : 'auto',
   }))
 
@@ -114,6 +177,9 @@ export function useImagePreview() {
 
   function close() {
     preview.value = null
+    pressedPanKeys.value.clear()
+    isShiftPressed.value = false
+    stopPan()
   }
 
   function download() {
@@ -191,22 +257,72 @@ export function useImagePreview() {
   }
 
   function onKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      close()
-    } else if (e.key === '+' || e.key === '=') {
-      zoomIn()
-    } else if (e.key === '-') {
-      zoomOut()
-    } else if (e.key === '0') {
-      resetView()
-    } else if (e.key === 'r' || e.key === 'R') {
-      rotateClockwise()
-    } else if (e.key === 'o' || e.key === 'O') {
-      if (preview.value) window.open(preview.value.url, '_blank', 'noopener noreferrer')
-    } else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
-      e.preventDefault()
-      download()
+    const key = e.key.toLowerCase()
+
+    if (key === 'shift') {
+      isShiftPressed.value = true
     }
+
+    if (!e.ctrlKey && !e.metaKey && PAN_KEYS.has(key)) {
+      e.preventDefault()
+      pressedPanKeys.value.add(key)
+      startPan()
+      return
+    }
+
+    if (!e.ctrlKey && !e.metaKey) {
+      switch (key) {
+        case 'escape':
+          close()
+          break
+        case '+':
+        case '=':
+          zoomIn()
+          break
+        case '-':
+          zoomOut()
+          break
+        case '0':
+          resetView()
+          break
+        case 'r':
+          rotateClockwise()
+          break
+        case 'o':
+          if (preview.value) window.open(preview.value.url, '_blank', 'noopener noreferrer')
+          break
+      }
+    } else {
+      switch (e.key.toLowerCase()) {
+        case 's':
+          e.preventDefault()
+          download()
+          break
+      }
+    }
+  }
+
+  function onKeyup(e: KeyboardEvent) {
+    const key = e.key.toLowerCase()
+
+    if (key === 'shift') {
+      isShiftPressed.value = false
+    }
+
+    if (PAN_KEYS.has(key)) {
+      pressedPanKeys.value.delete(key)
+      if (pressedPanKeys.value.size === 0) {
+        stopPan()
+      } else {
+        startPan()
+      }
+    }
+  }
+
+  function onBlur() {
+    pressedPanKeys.value.clear()
+    isShiftPressed.value = false
+    stopPan()
   }
 
   return {
@@ -226,5 +342,7 @@ export function useImagePreview() {
     onMousemove,
     onMouseup,
     onKeydown,
+    onKeyup,
+    onBlur,
   }
 }
