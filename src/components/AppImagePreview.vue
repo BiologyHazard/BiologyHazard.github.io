@@ -21,8 +21,6 @@ const {
   onMousemove,
   onMouseup,
   onKeydown,
-  onKeyup,
-  onBlur,
 } = useImagePreview(overlayRef)
 
 defineExpose({ open })
@@ -41,9 +39,7 @@ defineExpose({ open })
         ref="overlayRef"
         class="dark fixed inset-0 flex flex-col bg-black/92 outline-none"
         tabindex="0"
-        @blur="onBlur"
         @keydown="onKeydown"
-        @keyup="onKeyup"
         @mouseleave="onMouseup"
         @mousemove="onMousemove"
         @mouseup="onMouseup"

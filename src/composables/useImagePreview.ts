@@ -1,5 +1,9 @@
-import { useDevicePixelRatio } from '@vueuse/core'
-import { computed, nextTick, ref, watch, type CSSProperties, type Ref } from 'vue'
+import type { CSSProperties, Ref } from 'vue'
+
+import { useDevicePixelRatio, useMagicKeys } from '@vueuse/core'
+import { computed, nextTick, ref, watch } from 'vue'
+
+import { useAnimateWhenever } from '@/composables/useAnimateWhenever'
 
 export type Point = {
   x: number
@@ -21,8 +25,6 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   const PAN_FAST_MULTIPLIER = 4
   const ROTATE_SPEED = 90
   const ROTATE_FAST_MULTIPLIER = 2
-  const PAN_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'])
-  const ROTATE_KEYS = new Set(['q', 'e'])
 
   const preview = ref<PreviewTarget | null>(null)
   const scale = ref<number>(1)
@@ -34,40 +36,37 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   const isAutoFitting = ref<boolean>(false)
   const dragStart = ref<Point>({ x: 0, y: 0 })
   const offsetStart = ref<Point>({ x: 0, y: 0 })
-  const pressedPanKeys = ref<Set<string>>(new Set())
-  const pressedRotateKeys = ref<Set<string>>(new Set())
-  const isShiftPressed = ref<boolean>(false)
-  const animateFrame = ref<number | null>(null)
+  const {
+    shift: keyShift,
+    w: keyW,
+    a: keyA,
+    s: keyS,
+    d: keyD,
+    arrowup: keyArrowUp,
+    arrowdown: keyArrowDown,
+    arrowleft: keyArrowLeft,
+    arrowright: keyArrowRight,
+    q: keyQ,
+    e: keyE,
+  } = useMagicKeys()
+  const shouldPan = computed(() => {
+    const { x, y } = getPanDirection()
+    return x !== 0 || y !== 0
+  })
+  const shouldRotate = computed(() => getRotateDirection() !== 0)
   const animateLastTimestamp = ref<number | null>(null)
 
   /** 获取平移方向，x 和 y 的值分别表示水平方向和垂直方向，-1 表示向左或向上，1 表示向右或向下，0 表示不移动 */
   function getPanDirection() {
-    const keys = pressedPanKeys.value
-    const x =
-      Number(keys.has('a') || keys.has('arrowleft')) -
-      Number(keys.has('d') || keys.has('arrowright'))
-    const y =
-      Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'))
-    return { x, y }
+    return {
+      x: Number(keyA?.value || keyArrowLeft?.value) - Number(keyD?.value || keyArrowRight?.value),
+      y: Number(keyW?.value || keyArrowUp?.value) - Number(keyS?.value || keyArrowDown?.value),
+    }
   }
 
   /** 获取旋转方向，-1 表示逆时针，1 表示顺时针，0 表示不旋转 */
   function getRotateDirection() {
-    const keys = pressedRotateKeys.value
-    return Number(keys.has('e')) - Number(keys.has('q'))
-  }
-
-  function startAnimate() {
-    if (animateFrame.value !== null) return
-    animateFrame.value = requestAnimationFrame(animateStep)
-  }
-
-  function stopAnimate() {
-    if (animateFrame.value !== null) {
-      cancelAnimationFrame(animateFrame.value)
-      animateFrame.value = null
-    }
-    animateLastTimestamp.value = null
+    return Number(keyQ?.value) - Number(keyE?.value)
   }
 
   function animateStep(timestamp: number) {
@@ -81,11 +80,6 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     const panDirection = getPanDirection()
     const rotateDirection = getRotateDirection()
 
-    if (!panDirection.x && !panDirection.y && !rotateDirection) {
-      stopAnimate()
-      return
-    }
-
     if (panDirection.x || panDirection.y) {
       const magnitude = Math.hypot(panDirection.x, panDirection.y) || 1
       const unitX = panDirection.x / magnitude
@@ -94,10 +88,10 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
       offset.value = {
         x:
           offset.value.x +
-          unitX * PAN_SPEED * (isShiftPressed.value ? PAN_FAST_MULTIPLIER : 1) * deltaSeconds,
+          unitX * PAN_SPEED * (keyShift?.value ? PAN_FAST_MULTIPLIER : 1) * deltaSeconds,
         y:
           offset.value.y +
-          unitY * PAN_SPEED * (isShiftPressed.value ? PAN_FAST_MULTIPLIER : 1) * deltaSeconds,
+          unitY * PAN_SPEED * (keyShift?.value ? PAN_FAST_MULTIPLIER : 1) * deltaSeconds,
       }
     }
 
@@ -105,11 +99,9 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
       rotation.value +=
         rotateDirection *
         ROTATE_SPEED *
-        (isShiftPressed.value ? ROTATE_FAST_MULTIPLIER : 1) *
+        (keyShift?.value ? ROTATE_FAST_MULTIPLIER : 1) *
         deltaSeconds
     }
-
-    animateFrame.value = requestAnimationFrame(animateStep)
   }
 
   function getNextScale(value: number) {
@@ -182,10 +174,10 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   const imgStyle = computed<CSSProperties>(() => {
     const transitionParts = []
     if (!isAutoFitting.value) {
-      if (!isDragging.value && pressedPanKeys.value.size === 0) {
+      if (!isDragging.value && !shouldPan.value) {
         transitionParts.push('translate 0.15s ease')
       }
-      if (pressedRotateKeys.value.size === 0) {
+      if (!shouldRotate.value) {
         transitionParts.push('rotate 0.15s ease')
       }
       transitionParts.push('scale 0.15s ease')
@@ -214,10 +206,6 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
 
   function close() {
     preview.value = null
-    pressedPanKeys.value.clear()
-    pressedRotateKeys.value.clear()
-    isShiftPressed.value = false
-    stopAnimate()
   }
 
   function download() {
@@ -297,22 +285,6 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   function onKeydown(e: KeyboardEvent) {
     const key = e.key.toLowerCase()
 
-    if (key === 'shift') {
-      isShiftPressed.value = true
-    }
-
-    if (!e.ctrlKey && !e.metaKey && PAN_KEYS.has(key)) {
-      e.preventDefault()
-      pressedPanKeys.value.add(key)
-      startAnimate()
-    }
-
-    if (!e.ctrlKey && !e.metaKey && ROTATE_KEYS.has(key)) {
-      e.preventDefault()
-      pressedRotateKeys.value.add(key)
-      startAnimate()
-    }
-
     if (!e.ctrlKey && !e.metaKey) {
       switch (key) {
         case 'escape':
@@ -345,35 +317,23 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     }
   }
 
-  function onKeyup(e: KeyboardEvent) {
-    const key = e.key.toLowerCase()
-
-    if (key === 'shift') {
-      isShiftPressed.value = false
-    }
-
-    pressedPanKeys.value.delete(key)
-    pressedRotateKeys.value.delete(key)
-    if (pressedPanKeys.value.size === 0 && pressedRotateKeys.value.size === 0) {
-      stopAnimate()
-    } else {
-      startAnimate()
-    }
-  }
-
-  function onBlur() {
-    pressedPanKeys.value.clear()
-    pressedRotateKeys.value.clear()
-    isShiftPressed.value = false
-    stopAnimate()
-  }
-
   watch(preview, async (value) => {
     if (value) {
       await nextTick()
       overlayRef.value?.focus()
     }
   })
+
+  useAnimateWhenever(
+    computed(() => Boolean(shouldPan?.value || shouldRotate?.value)),
+    animateStep,
+    () => {
+      animateLastTimestamp.value = null
+    },
+    () => {
+      animateLastTimestamp.value = null
+    },
+  )
 
   return {
     preview,
@@ -392,7 +352,5 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     onMousemove,
     onMouseup,
     onKeydown,
-    onKeyup,
-    onBlur,
   }
 }
