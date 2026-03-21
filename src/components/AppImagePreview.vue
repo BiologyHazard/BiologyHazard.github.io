@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useImagePreview } from '@/composables/useImagePreview'
-import { nextTick, useTemplateRef, watch } from 'vue'
+import { useTemplateRef } from 'vue'
+
+const overlayRef = useTemplateRef('overlayRef')
 
 const {
   preview,
@@ -21,16 +23,7 @@ const {
   onKeydown,
   onKeyup,
   onBlur,
-} = useImagePreview()
-
-const overlayRef = useTemplateRef('overlayRef')
-
-watch(preview, async (value) => {
-  if (value) {
-    await nextTick()
-    overlayRef.value?.focus()
-  }
-})
+} = useImagePreview(overlayRef)
 
 defineExpose({ open })
 </script>

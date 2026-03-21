@@ -1,5 +1,5 @@
 import { useDevicePixelRatio } from '@vueuse/core'
-import { computed, ref, type CSSProperties } from 'vue'
+import { computed, nextTick, ref, watch, type CSSProperties, type Ref } from 'vue'
 
 export type Point = {
   x: number
@@ -12,7 +12,7 @@ export type PreviewTarget = {
   downloadName: string
 }
 
-export function useImagePreview() {
+export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   const MIN_SCALE = 1 / 128
   const MAX_SCALE = 128
   const STEP_FACTORS = [1, 1.25, 1.5] as const
@@ -21,18 +21,8 @@ export function useImagePreview() {
   const PAN_FAST_MULTIPLIER = 4
   const ROTATE_SPEED = 90
   const ROTATE_FAST_MULTIPLIER = 2
-  const ANIMATE_KEYS = new Set([
-    'w',
-    'a',
-    's',
-    'd',
-    'arrowup',
-    'arrowdown',
-    'arrowleft',
-    'arrowright',
-    'q',
-    'e',
-  ])
+  const PAN_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'])
+  const ROTATE_KEYS = new Set(['q', 'e'])
 
   const preview = ref<PreviewTarget | null>(null)
   const scale = ref<number>(1)
@@ -44,14 +34,15 @@ export function useImagePreview() {
   const isAutoFitting = ref<boolean>(false)
   const dragStart = ref<Point>({ x: 0, y: 0 })
   const offsetStart = ref<Point>({ x: 0, y: 0 })
-  const pressedAnimateKeys = ref<Set<string>>(new Set())
+  const pressedPanKeys = ref<Set<string>>(new Set())
+  const pressedRotateKeys = ref<Set<string>>(new Set())
   const isShiftPressed = ref<boolean>(false)
   const animateFrame = ref<number | null>(null)
   const animateLastTimestamp = ref<number | null>(null)
 
   /** 获取平移方向，x 和 y 的值分别表示水平方向和垂直方向，-1 表示向左或向上，1 表示向右或向下，0 表示不移动 */
   function getPanDirection() {
-    const keys = pressedAnimateKeys.value
+    const keys = pressedPanKeys.value
     const x =
       Number(keys.has('a') || keys.has('arrowleft')) -
       Number(keys.has('d') || keys.has('arrowright'))
@@ -62,7 +53,7 @@ export function useImagePreview() {
 
   /** 获取旋转方向，-1 表示逆时针，1 表示顺时针，0 表示不旋转 */
   function getRotateDirection() {
-    const keys = pressedAnimateKeys.value
+    const keys = pressedRotateKeys.value
     return Number(keys.has('e')) - Number(keys.has('q'))
   }
 
@@ -188,15 +179,29 @@ export function useImagePreview() {
     })
   }
 
-  const imgStyle = computed<CSSProperties>(() => ({
-    transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value / pixelRatio.value}) rotate(${rotation.value}deg)`,
-    cursor: isDragging.value ? 'grabbing' : 'grab',
-    transition:
-      isDragging.value || isAutoFitting.value || animateFrame.value
-        ? 'none'
-        : 'transform 0.15s ease',
-    imageRendering: scale.value >= PIXELATED_SCALE_THRESHOLD ? 'pixelated' : 'auto',
-  }))
+  const imgStyle = computed<CSSProperties>(() => {
+    const transitionParts = []
+    if (!isAutoFitting.value) {
+      if (!isDragging.value && pressedPanKeys.value.size === 0) {
+        transitionParts.push('translate 0.15s ease')
+      }
+      if (pressedRotateKeys.value.size === 0) {
+        transitionParts.push('rotate 0.15s ease')
+      }
+      transitionParts.push('scale 0.15s ease')
+    }
+    const transition =
+      !isAutoFitting.value && transitionParts.length > 0 ? transitionParts.join(', ') : 'none'
+
+    return {
+      translate: `${offset.value.x}px ${offset.value.y}px`,
+      scale: `${scale.value / pixelRatio.value}`,
+      rotate: `${rotation.value}deg`,
+      cursor: isDragging.value ? 'grabbing' : 'grab',
+      transition,
+      imageRendering: scale.value >= PIXELATED_SCALE_THRESHOLD ? 'pixelated' : 'auto',
+    }
+  })
 
   function open(target: PreviewTarget) {
     preview.value = target
@@ -209,7 +214,8 @@ export function useImagePreview() {
 
   function close() {
     preview.value = null
-    pressedAnimateKeys.value.clear()
+    pressedPanKeys.value.clear()
+    pressedRotateKeys.value.clear()
     isShiftPressed.value = false
     stopAnimate()
   }
@@ -295,11 +301,16 @@ export function useImagePreview() {
       isShiftPressed.value = true
     }
 
-    if (!e.ctrlKey && !e.metaKey && ANIMATE_KEYS.has(key)) {
+    if (!e.ctrlKey && !e.metaKey && PAN_KEYS.has(key)) {
       e.preventDefault()
-      pressedAnimateKeys.value.add(key)
+      pressedPanKeys.value.add(key)
       startAnimate()
-      return
+    }
+
+    if (!e.ctrlKey && !e.metaKey && ROTATE_KEYS.has(key)) {
+      e.preventDefault()
+      pressedRotateKeys.value.add(key)
+      startAnimate()
     }
 
     if (!e.ctrlKey && !e.metaKey) {
@@ -341,21 +352,28 @@ export function useImagePreview() {
       isShiftPressed.value = false
     }
 
-    if (ANIMATE_KEYS.has(key)) {
-      pressedAnimateKeys.value.delete(key)
-      if (pressedAnimateKeys.value.size === 0) {
-        stopAnimate()
-      } else {
-        startAnimate()
-      }
+    pressedPanKeys.value.delete(key)
+    pressedRotateKeys.value.delete(key)
+    if (pressedPanKeys.value.size === 0 && pressedRotateKeys.value.size === 0) {
+      stopAnimate()
+    } else {
+      startAnimate()
     }
   }
 
   function onBlur() {
-    pressedAnimateKeys.value.clear()
+    pressedPanKeys.value.clear()
+    pressedRotateKeys.value.clear()
     isShiftPressed.value = false
     stopAnimate()
   }
+
+  watch(preview, async (value) => {
+    if (value) {
+      await nextTick()
+      overlayRef.value?.focus()
+    }
+  })
 
   return {
     preview,
