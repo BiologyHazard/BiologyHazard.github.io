@@ -19,7 +19,20 @@ export function useImagePreview() {
   const PIXELATED_SCALE_THRESHOLD = 4
   const PAN_SPEED = 1600
   const PAN_FAST_MULTIPLIER = 4
-  const PAN_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'])
+  const ROTATE_SPEED = 90
+  const ROTATE_FAST_MULTIPLIER = 2
+  const ANIMATE_KEYS = new Set([
+    'w',
+    'a',
+    's',
+    'd',
+    'arrowup',
+    'arrowdown',
+    'arrowleft',
+    'arrowright',
+    'q',
+    'e',
+  ])
 
   const preview = ref<PreviewTarget | null>(null)
   const scale = ref<number>(1)
@@ -31,13 +44,14 @@ export function useImagePreview() {
   const isAutoFitting = ref<boolean>(false)
   const dragStart = ref<Point>({ x: 0, y: 0 })
   const offsetStart = ref<Point>({ x: 0, y: 0 })
-  const pressedPanKeys = ref<Set<string>>(new Set())
+  const pressedAnimateKeys = ref<Set<string>>(new Set())
   const isShiftPressed = ref<boolean>(false)
-  const panAnimationFrame = ref<number | null>(null)
-  const panLastTimestamp = ref<number | null>(null)
+  const animateFrame = ref<number | null>(null)
+  const animateLastTimestamp = ref<number | null>(null)
 
+  /** 获取平移方向，x 和 y 的值分别表示水平方向和垂直方向，-1 表示向左或向上，1 表示向右或向下，0 表示不移动 */
   function getPanDirection() {
-    const keys = pressedPanKeys.value
+    const keys = pressedAnimateKeys.value
     const x =
       Number(keys.has('a') || keys.has('arrowleft')) -
       Number(keys.has('d') || keys.has('arrowright'))
@@ -46,47 +60,65 @@ export function useImagePreview() {
     return { x, y }
   }
 
-  function startPan() {
-    if (panAnimationFrame.value !== null) return
-    panAnimationFrame.value = requestAnimationFrame(panStep)
+  /** 获取旋转方向，-1 表示逆时针，1 表示顺时针，0 表示不旋转 */
+  function getRotateDirection() {
+    const keys = pressedAnimateKeys.value
+    return Number(keys.has('e')) - Number(keys.has('q'))
   }
 
-  function stopPan() {
-    if (panAnimationFrame.value !== null) {
-      cancelAnimationFrame(panAnimationFrame.value)
-      panAnimationFrame.value = null
-    }
-    panLastTimestamp.value = null
+  function startAnimate() {
+    if (animateFrame.value !== null) return
+    animateFrame.value = requestAnimationFrame(animateStep)
   }
 
-  function panStep(timestamp: number) {
-    if (panLastTimestamp.value === null) {
-      panLastTimestamp.value = timestamp
+  function stopAnimate() {
+    if (animateFrame.value !== null) {
+      cancelAnimationFrame(animateFrame.value)
+      animateFrame.value = null
+    }
+    animateLastTimestamp.value = null
+  }
+
+  function animateStep(timestamp: number) {
+    if (animateLastTimestamp.value === null) {
+      animateLastTimestamp.value = timestamp
     }
 
-    const deltaSeconds = (timestamp - panLastTimestamp.value) / 1000
-    panLastTimestamp.value = timestamp
+    const deltaSeconds = (timestamp - animateLastTimestamp.value) / 1000
+    animateLastTimestamp.value = timestamp
 
-    const direction = getPanDirection()
-    if (!direction.x && !direction.y) {
-      stopPan()
+    const panDirection = getPanDirection()
+    const rotateDirection = getRotateDirection()
+
+    if (!panDirection.x && !panDirection.y && !rotateDirection) {
+      stopAnimate()
       return
     }
 
-    const magnitude = Math.hypot(direction.x, direction.y) || 1
-    const unitX = direction.x / magnitude
-    const unitY = direction.y / magnitude
+    if (panDirection.x || panDirection.y) {
+      const magnitude = Math.hypot(panDirection.x, panDirection.y) || 1
+      const unitX = panDirection.x / magnitude
+      const unitY = panDirection.y / magnitude
 
-    offset.value = {
-      x:
-        offset.value.x +
-        unitX * PAN_SPEED * (isShiftPressed.value ? PAN_FAST_MULTIPLIER : 1) * deltaSeconds,
-      y:
-        offset.value.y +
-        unitY * PAN_SPEED * (isShiftPressed.value ? PAN_FAST_MULTIPLIER : 1) * deltaSeconds,
+      offset.value = {
+        x:
+          offset.value.x +
+          unitX * PAN_SPEED * (isShiftPressed.value ? PAN_FAST_MULTIPLIER : 1) * deltaSeconds,
+        y:
+          offset.value.y +
+          unitY * PAN_SPEED * (isShiftPressed.value ? PAN_FAST_MULTIPLIER : 1) * deltaSeconds,
+      }
     }
 
-    panAnimationFrame.value = requestAnimationFrame(panStep)
+    if (rotateDirection) {
+      rotation.value +=
+        rotateDirection *
+        ROTATE_SPEED *
+        (isShiftPressed.value ? ROTATE_FAST_MULTIPLIER : 1) *
+        deltaSeconds
+    }
+
+    animateFrame.value = requestAnimationFrame(animateStep)
   }
 
   function getNextScale(value: number) {
@@ -160,7 +192,7 @@ export function useImagePreview() {
     transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value / pixelRatio.value}) rotate(${rotation.value}deg)`,
     cursor: isDragging.value ? 'grabbing' : 'grab',
     transition:
-      isDragging.value || isAutoFitting.value || panAnimationFrame.value
+      isDragging.value || isAutoFitting.value || animateFrame.value
         ? 'none'
         : 'transform 0.15s ease',
     imageRendering: scale.value >= PIXELATED_SCALE_THRESHOLD ? 'pixelated' : 'auto',
@@ -177,9 +209,9 @@ export function useImagePreview() {
 
   function close() {
     preview.value = null
-    pressedPanKeys.value.clear()
+    pressedAnimateKeys.value.clear()
     isShiftPressed.value = false
-    stopPan()
+    stopAnimate()
   }
 
   function download() {
@@ -263,10 +295,10 @@ export function useImagePreview() {
       isShiftPressed.value = true
     }
 
-    if (!e.ctrlKey && !e.metaKey && PAN_KEYS.has(key)) {
+    if (!e.ctrlKey && !e.metaKey && ANIMATE_KEYS.has(key)) {
       e.preventDefault()
-      pressedPanKeys.value.add(key)
-      startPan()
+      pressedAnimateKeys.value.add(key)
+      startAnimate()
       return
     }
 
@@ -309,20 +341,20 @@ export function useImagePreview() {
       isShiftPressed.value = false
     }
 
-    if (PAN_KEYS.has(key)) {
-      pressedPanKeys.value.delete(key)
-      if (pressedPanKeys.value.size === 0) {
-        stopPan()
+    if (ANIMATE_KEYS.has(key)) {
+      pressedAnimateKeys.value.delete(key)
+      if (pressedAnimateKeys.value.size === 0) {
+        stopAnimate()
       } else {
-        startPan()
+        startAnimate()
       }
     }
   }
 
   function onBlur() {
-    pressedPanKeys.value.clear()
+    pressedAnimateKeys.value.clear()
     isShiftPressed.value = false
-    stopPan()
+    stopAnimate()
   }
 
   return {

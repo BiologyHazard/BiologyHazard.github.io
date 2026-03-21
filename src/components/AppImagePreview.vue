@@ -146,6 +146,15 @@ defineExpose({ open })
             <UKbd class="text-toned" value="shift" /> + 方向键 / WASD 加速平移
           </span>
           <span class="inline-flex items-center gap-1">
+            <UKbd class="text-toned" value="Q" /> / <UKbd class="text-toned" value="E" />
+            缓慢旋转
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <UKbd class="text-toned" value="shift" /> + <UKbd class="text-toned" value="Q" /> /
+            <UKbd class="text-toned" value="E" />
+            加速旋转
+          </span>
+          <span class="inline-flex items-center gap-1">
             <UKbd class="text-toned" value="-" />
             / <UKbd class="text-toned" value="=" />
             缩放
