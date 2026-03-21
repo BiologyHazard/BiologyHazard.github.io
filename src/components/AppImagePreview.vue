@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import ImagePreviewHelpMenu from '@/components/ImagePreviewHelpMenu.vue'
 import { useImagePreview } from '@/composables/useImagePreview'
-import { nextTick, useTemplateRef, watch } from 'vue'
+import { useTemplateRef } from 'vue'
+
+const overlayRef = useTemplateRef('overlayRef')
 
 const {
   preview,
@@ -19,16 +22,7 @@ const {
   onMousemove,
   onMouseup,
   onKeydown,
-} = useImagePreview()
-
-const overlayRef = useTemplateRef('overlayRef')
-
-watch(preview, async (value) => {
-  if (value) {
-    await nextTick()
-    overlayRef.value?.focus()
-  }
-})
+} = useImagePreview(overlayRef)
 
 defineExpose({ open })
 </script>
@@ -44,7 +38,7 @@ defineExpose({ open })
       <div
         v-if="preview"
         ref="overlayRef"
-        class="dark fixed inset-0 flex flex-col bg-black/92 outline-none"
+        class="fixed inset-0 flex flex-col bg-black/92 outline-none"
         tabindex="0"
         @keydown="onKeydown"
         @mouseleave="onMouseup"
@@ -52,20 +46,22 @@ defineExpose({ open })
         @mouseup="onMouseup"
       >
         <!-- 顶部工具栏 -->
-        <div class="flex shrink-0 items-center justify-between gap-4 bg-black/40 px-4 py-2">
-          <p class="truncate text-sm text-toned">{{ preview.name }}</p>
+        <div class="flex shrink-0 items-center justify-between gap-4 bg-default px-4 py-2">
+          <p class="truncate text-toned">{{ preview.name }}</p>
           <div class="flex shrink-0 items-center gap-1">
             <UTooltip :kbds="['-']" text="缩小">
               <UButton color="neutral" icon="i-lucide-minus" variant="ghost" @click="zoomOut" />
             </UTooltip>
-            <UButton
-              class="min-w-16 justify-center text-sm"
-              color="neutral"
-              variant="ghost"
-              @click="resetView"
-            >
-              {{ Math.round(scale * 100) }}%
-            </UButton>
+            <UTooltip :kbds="['0']" text="重置视图">
+              <UButton
+                class="min-w-16 justify-center text-sm"
+                color="neutral"
+                variant="ghost"
+                @click="resetView()"
+              >
+                {{ Math.round(scale * 100) }}%
+              </UButton>
+            </UTooltip>
             <UTooltip :kbds="['=']" text="放大">
               <UButton color="neutral" icon="i-lucide-plus" variant="ghost" @click="zoomIn" />
             </UTooltip>
@@ -91,6 +87,19 @@ defineExpose({ open })
             <UTooltip :kbds="['meta', 'S']" text="下载">
               <UButton color="neutral" icon="i-lucide-download" variant="ghost" @click="download" />
             </UTooltip>
+            <UPopover mode="click" :ui="{ content: 'p-4 w-80' }">
+              <UTooltip text="帮助">
+                <UButton
+                  color="neutral"
+                  icon="i-lucide-circle-question-mark"
+                  size="lg"
+                  variant="ghost"
+                />
+              </UTooltip>
+              <template #content>
+                <ImagePreviewHelpMenu />
+              </template>
+            </UPopover>
             <UTooltip :kbds="['escape']" text="关闭">
               <UButton color="neutral" icon="i-lucide-x" variant="ghost" @click="close" />
             </UTooltip>
@@ -113,45 +122,6 @@ defineExpose({ open })
             @load="onImageLoad"
             @mousedown="onMousedown"
           />
-        </div>
-
-        <!-- 底部悬浮提示 -->
-        <div
-          class="pointer-events-none absolute bottom-4 left-1/2 hidden -translate-x-1/2 flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl bg-default/75 px-3 py-1.5 text-xs text-muted backdrop-blur lg:flex"
-        >
-          <span class="inline-flex items-center gap-1">
-            <div
-              class="inline-flex h-5 items-center justify-center rounded-sm bg-default px-1 text-toned ring ring-accented ring-inset"
-            >
-              <UIcon name="i-lucide-mouse" />
-            </div>
-            缩放 / 移动
-          </span>
-          <span class="inline-flex items-center gap-1">
-            <UKbd class="text-toned" value="-" />
-            / <UKbd class="text-toned" value="=" />
-            缩放
-          </span>
-          <span class="inline-flex items-center gap-1">
-            <UKbd class="text-toned" value="R" />
-            旋转
-          </span>
-          <span class="inline-flex items-center gap-1">
-            <UKbd class="text-toned" value="O" />
-            新标签页打开
-          </span>
-          <span class="inline-flex items-center gap-1">
-            <UKbd class="text-toned" value="0" />
-            重置视图
-          </span>
-          <span class="inline-flex items-center gap-1">
-            <UKbd class="text-toned" value="meta" /> + <UKbd class="text-toned" value="S" />
-            下载
-          </span>
-          <span class="inline-flex items-center gap-1">
-            <UKbd class="text-toned" value="esc" />
-            关闭
-          </span>
         </div>
       </div>
     </Transition>
