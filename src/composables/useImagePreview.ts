@@ -272,6 +272,11 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     rotation.value += 90
   }
 
+  /** 逆时针旋转 90° */
+  function rotateCounterClockwise(): void {
+    rotation.value -= 90
+  }
+
   /** 恢复图像为初始状态 */
   function resetView(key: string = '0'): void {
     offset.value = { x: 0, y: 0 }
@@ -352,14 +357,14 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
 
     if (!e.ctrlKey && !e.metaKey) {
       switch (lowerKey) {
-        case 'escape':
+        case 'escape': // Escape 键关闭预览
           close()
           break
         case '+':
-        case '=':
+        case '=': // 放大
           zoomIn()
           break
-        case '-':
+        case '-': // 缩小
           zoomOut()
           break
         case '0':
@@ -371,20 +376,23 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
         case '6':
         case '7':
         case '8':
-        case '9': {
+        case '9': // 重置视图，1-9 分别对应不同的缩放倍数，0 表示适应屏幕
           resetView(lowerKey)
           break
-        }
-        case 'r':
-          rotateClockwise()
+        case 'r': // 旋转图像
+          if (e.shiftKey) {
+            rotateCounterClockwise()
+          } else {
+            rotateClockwise()
+          }
           break
-        case 'o':
+        case 'o': // 在新标签页中打开图像
           if (preview.value) window.open(preview.value.url, '_blank', 'noopener noreferrer')
           break
       }
     } else {
-      switch (e.key.toLowerCase()) {
-        case 's':
+      switch (lowerKey) {
+        case 's': // 下载图像
           e.preventDefault()
           download()
           break
@@ -402,7 +410,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
 
   // 在需要动画时执行动画步骤函数，自动管理动画帧的请求和取消
   useAnimateWhenever(
-    computed(() => Boolean(shouldPan?.value || shouldRotate?.value || shouldZoom?.value)),
+    computed(() => Boolean(shouldPan.value || shouldRotate.value || shouldZoom.value)),
     animateStep,
     () => {
       animateLastTimestamp.value = null
