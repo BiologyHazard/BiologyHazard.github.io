@@ -82,7 +82,6 @@ defineExpose({ open })
               </UTooltip>
               <template #content>
                 <UColorPicker v-model="backgroundColor" />
-                <UInput v-model="backgroundColor" class="mt-2" />
               </template>
             </UPopover>
             <UTooltip :kbds="['O']" text="在新标签页中打开图像">
