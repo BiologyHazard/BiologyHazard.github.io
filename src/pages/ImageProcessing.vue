@@ -1,144 +1,147 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, useTemplateRef } from 'vue'
-import AppImagePreview from '@/components/AppImagePreview.vue'
-import type { PreviewTarget } from '@/composables/useImagePreview'
+import { computed, onBeforeUnmount, ref, useTemplateRef } from 'vue';
+import AppImagePreview from '@/components/AppImagePreview.vue';
+import type { PreviewTarget } from '@/composables/useImagePreview';
 
-type ImageFormat = 'image/webp' | 'image/jpeg' | 'image/png'
+type ImageFormat = 'image/webp' | 'image/jpeg' | 'image/png';
 
 type ImageResult = {
-  blob: Blob
-  url: string
-  width: number
-  height: number
-  format: ImageFormat
-}
+  blob: Blob;
+  url: string;
+  width: number;
+  height: number;
+  format: ImageFormat;
+};
 
 type ImageItem = {
-  id: string
-  file: File
-  sourceUrl: string
-  sourceWidth: number
-  sourceHeight: number
-  result: ImageResult | null
-  error: string
-}
+  id: string;
+  file: File;
+  sourceUrl: string;
+  sourceWidth: number;
+  sourceHeight: number;
+  result: ImageResult | null;
+  error: string;
+};
 
-const files = ref<File[]>([])
-const imageItems = ref<ImageItem[]>([])
+const files = ref<File[]>([]);
+const imageItems = ref<ImageItem[]>([]);
 
-const targetFormat = ref<ImageFormat>('image/webp')
-const qualityPercent = ref<number>(50)
-const targetWidth = ref<number>(0)
-const targetHeight = ref<number>(0)
+const targetFormat = ref<ImageFormat>('image/webp');
+const qualityPercent = ref<number>(50);
+const targetWidth = ref<number>(0);
+const targetHeight = ref<number>(0);
 
-const resizeMode = ref<'custom' | 'contain' | 'scale'>('scale')
-const maxLongSide = ref<number>(1920)
-const maxShortSide = ref<number>(1080)
-const scaleRatio = ref<number>(1.0)
+const resizeMode = ref<'custom' | 'contain' | 'scale'>('scale');
+const maxLongSide = ref<number>(1920);
+const maxShortSide = ref<number>(1080);
+const scaleRatio = ref<number>(1.0);
 
-const isCompressing = ref<boolean>(false)
-const errorMessage = ref<string>('')
-const progressText = ref<string>('')
+const isCompressing = ref<boolean>(false);
+const errorMessage = ref<string>('');
+const progressText = ref<string>('');
 
-const outputDirHandle = ref<FileSystemDirectoryHandle | null>(null)
-const isSavingToFolder = ref<boolean>(false)
+const outputDirHandle = ref<FileSystemDirectoryHandle | null>(null);
+const isSavingToFolder = ref<boolean>(false);
 
-const quality = computed(() => Math.min(1, Math.max(0.1, qualityPercent.value / 100)))
+const quality = computed(() => Math.min(1, Math.max(0.1, qualityPercent.value / 100)));
 
 const totalSourceSizeText = computed(() => {
-  const total = imageItems.value.reduce((sum, item) => sum + item.file.size, 0)
-  return formatBytes(total)
-})
+  const total = imageItems.value.reduce((sum, item) => sum + item.file.size, 0);
+  return formatBytes(total);
+});
 const totalResultSizeText = computed(() => {
-  const total = imageItems.value.reduce((sum, item) => sum + (item.result?.blob.size ?? 0), 0)
-  return formatBytes(total)
-})
+  const total = imageItems.value.reduce((sum, item) => sum + (item.result?.blob.size ?? 0), 0);
+  return formatBytes(total);
+});
 const totalRatioText = computed(() => {
-  const sourceTotal = imageItems.value.reduce((sum, item) => sum + item.file.size, 0)
-  const resultTotal = imageItems.value.reduce((sum, item) => sum + (item.result?.blob.size ?? 0), 0)
-  if (!sourceTotal || !resultTotal) return '-'
-  return `${((resultTotal / sourceTotal) * 100).toFixed(1)}%`
-})
-const processedCount = computed(() => imageItems.value.filter((item) => item.result).length)
-const validImageCount = computed(() => imageItems.value.length)
+  const sourceTotal = imageItems.value.reduce((sum, item) => sum + item.file.size, 0);
+  const resultTotal = imageItems.value.reduce(
+    (sum, item) => sum + (item.result?.blob.size ?? 0),
+    0,
+  );
+  if (!sourceTotal || !resultTotal) return '-';
+  return `${((resultTotal / sourceTotal) * 100).toFixed(1)}%`;
+});
+const processedCount = computed(() => imageItems.value.filter((item) => item.result).length);
+const validImageCount = computed(() => imageItems.value.length);
 
 function getItemRatio(item: ImageItem): string {
-  if (!item.result) return '-'
-  return `${((item.result.blob.size / item.file.size) * 100).toFixed(1)}%`
+  if (!item.result) return '-';
+  return `${((item.result.blob.size / item.file.size) * 100).toFixed(1)}%`;
 }
 
 function formatBytes(bytes: number): string {
-  if (!bytes) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
-  let current = bytes
-  let index = 0
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  let current = bytes;
+  let index = 0;
   while (index < units.length - 1 && current >= 1024) {
-    current /= 1024
-    index += 1
+    current /= 1024;
+    index += 1;
   }
-  const unit = units[index]
-  return `${current.toFixed(unit === 'B' ? 0 : 2)} ${unit}`
+  const unit = units[index];
+  return `${current.toFixed(unit === 'B' ? 0 : 2)} ${unit}`;
 }
 
 function revokeUrl(url: string): void {
-  if (url) URL.revokeObjectURL(url)
+  if (url) URL.revokeObjectURL(url);
 }
 
 async function getImageSize(file: File): Promise<{ width: number; height: number }> {
-  const url = URL.createObjectURL(file)
+  const url = URL.createObjectURL(file);
 
   try {
-    const image = await loadImage(url)
-    return { width: image.naturalWidth, height: image.naturalHeight }
+    const image = await loadImage(url);
+    return { width: image.naturalWidth, height: image.naturalHeight };
   } finally {
-    revokeUrl(url)
+    revokeUrl(url);
   }
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
-    const image = new Image()
-    image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error('图片加载失败，请更换图片重试。'))
-    image.src = src
-  })
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('图片加载失败，请更换图片重试。'));
+    image.src = src;
+  });
 }
 
 function clearAllItems(): void {
   for (const item of imageItems.value) {
-    revokeUrl(item.sourceUrl)
+    revokeUrl(item.sourceUrl);
     if (item.result?.url) {
-      revokeUrl(item.result.url)
+      revokeUrl(item.result.url);
     }
   }
-  imageItems.value = []
+  imageItems.value = [];
 }
 
 async function handleFileUpdate(files: File[] | null | undefined): Promise<void> {
-  errorMessage.value = ''
-  progressText.value = ''
-  clearAllItems()
+  errorMessage.value = '';
+  progressText.value = '';
+  clearAllItems();
 
-  const fileList = files ?? []
-  if (!fileList.length) return
+  const fileList = files ?? [];
+  if (!fileList.length) return;
 
-  const invalidCount = fileList.filter((file) => !file.type.startsWith('image/')).length
+  const invalidCount = fileList.filter((file) => !file.type.startsWith('image/')).length;
   if (invalidCount === fileList.length) {
-    errorMessage.value = '请选择图片文件。'
-    return
+    errorMessage.value = '请选择图片文件。';
+    return;
   }
 
   if (invalidCount > 0) {
-    errorMessage.value = `已忽略 ${invalidCount} 个非图片文件。`
+    errorMessage.value = `已忽略 ${invalidCount} 个非图片文件。`;
   }
 
-  const validFiles = fileList.filter((file) => file.type.startsWith('image/'))
-  const items: ImageItem[] = []
+  const validFiles = fileList.filter((file) => file.type.startsWith('image/'));
+  const items: ImageItem[] = [];
 
   for (const file of validFiles) {
-    const sourceUrl = URL.createObjectURL(file)
+    const sourceUrl = URL.createObjectURL(file);
     try {
-      const size = await getImageSize(file)
+      const size = await getImageSize(file);
       items.push({
         id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
         file,
@@ -147,82 +150,82 @@ async function handleFileUpdate(files: File[] | null | undefined): Promise<void>
         sourceHeight: size.height,
         result: null,
         error: '',
-      })
+      });
     } catch (error) {
-      revokeUrl(sourceUrl)
-      const message = error instanceof Error ? error.message : '读取图片尺寸失败。'
-      errorMessage.value = message
+      revokeUrl(sourceUrl);
+      const message = error instanceof Error ? error.message : '读取图片尺寸失败。';
+      errorMessage.value = message;
     }
   }
 
-  imageItems.value = items
+  imageItems.value = items;
 }
 
 async function compressItem(item: ImageItem): Promise<void> {
-  let outputWidth = item.sourceWidth
-  let outputHeight = item.sourceHeight
+  let outputWidth = item.sourceWidth;
+  let outputHeight = item.sourceHeight;
 
   // 计算输出尺寸
   switch (resizeMode.value) {
     // 按缩放倍率调整尺寸
     case 'scale': {
-      const ratio = scaleRatio.value || 1
-      outputWidth = Math.max(1, Math.round(item.sourceWidth * ratio))
-      outputHeight = Math.max(1, Math.round(item.sourceHeight * ratio))
-      break
+      const ratio = scaleRatio.value || 1;
+      outputWidth = Math.max(1, Math.round(item.sourceWidth * ratio));
+      outputHeight = Math.max(1, Math.round(item.sourceHeight * ratio));
+      break;
     }
     // 按长短边限制调整尺寸，保持宽高比
     case 'contain': {
-      const currentLong = Math.max(item.sourceWidth, item.sourceHeight)
-      const currentShort = Math.min(item.sourceWidth, item.sourceHeight)
+      const currentLong = Math.max(item.sourceWidth, item.sourceHeight);
+      const currentShort = Math.min(item.sourceWidth, item.sourceHeight);
 
-      const targetLong = maxLongSide.value || currentLong
-      const targetShort = maxShortSide.value || currentShort
+      const targetLong = maxLongSide.value || currentLong;
+      const targetShort = maxShortSide.value || currentShort;
 
-      const ratioLong = targetLong / currentLong
-      const ratioShort = targetShort / currentShort
-      const ratio = Math.min(1, ratioLong, ratioShort)
+      const ratioLong = targetLong / currentLong;
+      const ratioShort = targetShort / currentShort;
+      const ratio = Math.min(1, ratioLong, ratioShort);
 
-      outputWidth = Math.max(1, Math.round(item.sourceWidth * ratio))
-      outputHeight = Math.max(1, Math.round(item.sourceHeight * ratio))
-      break
+      outputWidth = Math.max(1, Math.round(item.sourceWidth * ratio));
+      outputHeight = Math.max(1, Math.round(item.sourceHeight * ratio));
+      break;
     }
     // 自定义指定宽高
     case 'custom': {
-      outputWidth = Math.max(1, Math.floor(targetWidth.value || item.sourceWidth))
-      outputHeight = Math.max(1, Math.floor(targetHeight.value || item.sourceHeight))
-      break
+      outputWidth = Math.max(1, Math.floor(targetWidth.value || item.sourceWidth));
+      outputHeight = Math.max(1, Math.floor(targetHeight.value || item.sourceHeight));
+      break;
     }
   }
 
-  const image = await loadImage(item.sourceUrl)
-  const canvas = document.createElement('canvas')
-  canvas.width = outputWidth
-  canvas.height = outputHeight
+  const image = await loadImage(item.sourceUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = outputWidth;
+  canvas.height = outputHeight;
 
-  const context = canvas.getContext('2d')
+  const context = canvas.getContext('2d');
   if (!context) {
-    throw new Error('浏览器不支持 Canvas 压缩。')
+    throw new Error('浏览器不支持 Canvas 压缩。');
   }
 
-  context.drawImage(image, 0, 0, outputWidth, outputHeight)
+  context.drawImage(image, 0, 0, outputWidth, outputHeight);
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (generatedBlob) => {
         if (!generatedBlob) {
-          reject(new Error(`${targetFormat.value} 编码失败，请尝试调整参数后重试。`))
-          return
+          reject(new Error(`${targetFormat.value} 编码失败，请尝试调整参数后重试。`));
+          return;
         }
-        resolve(generatedBlob)
+        resolve(generatedBlob);
       },
       targetFormat.value,
       targetFormat.value === 'image/png' ? undefined : quality.value,
-    )
-  })
+    );
+  });
 
   if (item.result?.url) {
-    revokeUrl(item.result.url)
+    revokeUrl(item.result.url);
   }
   item.result = {
     blob,
@@ -230,85 +233,85 @@ async function compressItem(item: ImageItem): Promise<void> {
     width: outputWidth,
     height: outputHeight,
     format: targetFormat.value,
-  }
+  };
 }
 
 async function runWithConcurrencyLimit<T>(
   tasks: (() => Promise<T>)[],
   limit: number,
 ): Promise<void> {
-  const queue = [...tasks]
+  const queue = [...tasks];
   async function worker() {
     while (queue.length) {
-      await queue.shift()!()
+      await queue.shift()!();
     }
   }
-  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker))
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
 }
 
 async function compressToImages(): Promise<void> {
-  errorMessage.value = ''
-  progressText.value = ''
+  errorMessage.value = '';
+  progressText.value = '';
 
   if (!imageItems.value.length) {
-    errorMessage.value = '请先上传至少一张图片。'
-    return
+    errorMessage.value = '请先上传至少一张图片。';
+    return;
   }
 
-  isCompressing.value = true
-  let doneCount = 0
-  const total = imageItems.value.length
-  progressText.value = `正在处理 0/${total}…`
+  isCompressing.value = true;
+  let doneCount = 0;
+  const total = imageItems.value.length;
+  progressText.value = `正在处理 0/${total}…`;
   try {
     await runWithConcurrencyLimit(
       imageItems.value.map((item) => async () => {
-        item.error = ''
+        item.error = '';
         try {
-          await compressItem(item)
+          await compressItem(item);
         } catch (error) {
-          item.error = error instanceof Error ? error.message : '压缩失败，请重试。'
+          item.error = error instanceof Error ? error.message : '压缩失败，请重试。';
         }
-        doneCount += 1
-        progressText.value = `正在处理 ${doneCount}/${total}…`
+        doneCount += 1;
+        progressText.value = `正在处理 ${doneCount}/${total}…`;
       }),
       8,
-    )
-    progressText.value = `处理完成：${processedCount.value}/${total}`
+    );
+    progressText.value = `处理完成：${processedCount.value}/${total}`;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '压缩失败，请重试。'
+    errorMessage.value = error instanceof Error ? error.message : '压缩失败，请重试。';
   } finally {
-    isCompressing.value = false
+    isCompressing.value = false;
   }
 }
 
 function getExtension(mimeType: ImageFormat): string {
   switch (mimeType) {
     case 'image/jpeg':
-      return 'jpg'
+      return 'jpg';
     case 'image/png':
-      return 'png'
+      return 'png';
     case 'image/webp':
-      return 'webp'
+      return 'webp';
     default:
-      return ''
+      return '';
   }
 }
 
 function downloadImage(item: ImageItem): void {
-  if (!item.result) return
-  const filenameWithoutExt = item.file.name.replace(/\.[^.]+$/, '')
-  const extension = getExtension(item.result.format)
-  const anchor = document.createElement('a')
-  anchor.href = item.result.url
-  anchor.download = `${filenameWithoutExt || 'compressed'}.${extension}`
-  anchor.click()
+  if (!item.result) return;
+  const filenameWithoutExt = item.file.name.replace(/\.[^.]+$/, '');
+  const extension = getExtension(item.result.format);
+  const anchor = document.createElement('a');
+  anchor.href = item.result.url;
+  anchor.download = `${filenameWithoutExt || 'compressed'}.${extension}`;
+  anchor.click();
 }
 
 async function downloadAll(): Promise<void> {
-  const readyItems = imageItems.value.filter((item) => item.result)
+  const readyItems = imageItems.value.filter((item) => item.result);
   for (const item of readyItems) {
-    downloadImage(item)
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    downloadImage(item);
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
 
@@ -318,20 +321,20 @@ async function selectOutputDirectory(): Promise<void> {
     const showDirectoryPicker = (
       window as Window &
         typeof globalThis & { showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle> }
-    ).showDirectoryPicker
+    ).showDirectoryPicker;
     if (!showDirectoryPicker) {
-      errorMessage.value = '您的浏览器不支持文件系统访问 API。'
-      return
+      errorMessage.value = '您的浏览器不支持文件系统访问 API。';
+      return;
     }
-    const dirHandle = await showDirectoryPicker()
-    outputDirHandle.value = dirHandle
-    errorMessage.value = ''
+    const dirHandle = await showDirectoryPicker();
+    outputDirHandle.value = dirHandle;
+    errorMessage.value = '';
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       // 用户取消了选择，不显示错误
-      return
+      return;
     }
-    errorMessage.value = error instanceof Error ? error.message : '选择文件夹失败。'
+    errorMessage.value = error instanceof Error ? error.message : '选择文件夹失败。';
   }
 }
 
@@ -340,89 +343,89 @@ async function getAvailableFilename(
   baseName: string,
   extension: string,
 ): Promise<string> {
-  const safeBase = baseName || 'image'
-  let candidate = `${safeBase}.${extension}`
-  let index = 1
+  const safeBase = baseName || 'image';
+  let candidate = `${safeBase}.${extension}`;
+  let index = 1;
 
   // Try increasing indices until we find a filename that does not exist.
   while (true) {
     try {
       // If this succeeds, the file exists and we need a new candidate name.
-      await dirHandle.getFileHandle(candidate)
-      candidate = `${safeBase} (${index}).${extension}`
-      index += 1
+      await dirHandle.getFileHandle(candidate);
+      candidate = `${safeBase} (${index}).${extension}`;
+      index += 1;
     } catch (error) {
-      const err = error as DOMException
+      const err = error as DOMException;
       // NotFoundError means the file does not exist yet, so we can safely use this name.
       if (err && err.name === 'NotFoundError') {
-        return candidate
+        return candidate;
       }
       // For other errors, rethrow so the caller can handle them.
-      throw error
+      throw error;
     }
   }
 }
 
 async function exportToFolder(): Promise<void> {
-  errorMessage.value = ''
-  progressText.value = ''
+  errorMessage.value = '';
+  progressText.value = '';
 
-  await selectOutputDirectory()
+  await selectOutputDirectory();
   if (!outputDirHandle.value) {
     // 用户取消了选择
-    return
+    return;
   }
 
-  const readyItems = imageItems.value.filter((item) => item.result)
+  const readyItems = imageItems.value.filter((item) => item.result);
   if (!readyItems.length) {
-    errorMessage.value = '没有可导出的处理结果图片。'
-    return
+    errorMessage.value = '没有可导出的处理结果图片。';
+    return;
   }
 
-  isSavingToFolder.value = true
-  let successCount = 0
-  const total = readyItems.length
+  isSavingToFolder.value = true;
+  let successCount = 0;
+  const total = readyItems.length;
 
   try {
-    const dirHandle = outputDirHandle.value
-    if (!dirHandle) return
+    const dirHandle = outputDirHandle.value;
+    if (!dirHandle) return;
 
     for (let i = 0; i < readyItems.length; i++) {
-      const item = readyItems[i]
-      if (!item?.result) continue
-      const filenameWithoutExt = item.file.name.replace(/\.[^.]+$/, '')
-      const baseName = filenameWithoutExt || 'image'
-      const extension = getExtension(item.result.format)
-      const filename = await getAvailableFilename(dirHandle, baseName, extension)
+      const item = readyItems[i];
+      if (!item?.result) continue;
+      const filenameWithoutExt = item.file.name.replace(/\.[^.]+$/, '');
+      const baseName = filenameWithoutExt || 'image';
+      const extension = getExtension(item.result.format);
+      const filename = await getAvailableFilename(dirHandle, baseName, extension);
 
-      progressText.value = `正在导出 ${i + 1}/${total}…`
+      progressText.value = `正在导出 ${i + 1}/${total}…`;
 
       try {
-        const fileHandle = await dirHandle.getFileHandle(filename, { create: true })
-        const writable = await fileHandle.createWritable()
-        await writable.write(item.result.blob)
-        await writable.close()
-        successCount += 1
+        const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(item.result.blob);
+        await writable.close();
+        successCount += 1;
       } catch (error) {
-        console.error(`导出 ${filename} 失败:`, error)
+        console.error(`导出 ${filename} 失败:`, error);
       }
     }
-    progressText.value = `导出完成：${successCount}/${total}`
+    progressText.value = `导出完成：${successCount}/${total}`;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '导出失败，请重试。'
+    errorMessage.value = error instanceof Error ? error.message : '导出失败，请重试。';
   } finally {
-    isSavingToFolder.value = false
+    isSavingToFolder.value = false;
   }
 }
 
 onBeforeUnmount(() => {
-  clearAllItems()
-})
+  clearAllItems();
+});
 
-const imagePreviewRef = useTemplateRef('imagePreviewRef')
+const imagePreviewRef = useTemplateRef('imagePreviewRef');
 
 function openPreview(target: PreviewTarget) {
-  imagePreviewRef.value?.open(target)
+  imagePreviewRef.value?.open(target);
 }
 </script>
 
@@ -569,8 +572,8 @@ function openPreview(target: PreviewTarget) {
                   variant="outline"
                   @click="
                     () => {
-                      files = []
-                      handleFileUpdate(files)
+                      files = [];
+                      handleFileUpdate(files);
                     }
                   "
                 >

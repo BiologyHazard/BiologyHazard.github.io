@@ -1,57 +1,57 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useClipboard } from '@vueuse/core'
+import { ref } from 'vue';
+import { useClipboard } from '@vueuse/core';
 
-const input = ref('')
-const output = ref('')
+const input = ref('');
+const output = ref('');
 
-const { copy, copied } = useClipboard()
+const { copy, copied } = useClipboard();
 
 function jsonEscape() {
   try {
-    output.value = JSON.stringify(input.value)
+    output.value = JSON.stringify(input.value);
   } catch (e) {
-    output.value = '错误: ' + (e as Error).message
+    output.value = '错误: ' + (e as Error).message;
   }
 }
 
 function jsonUnescape() {
   try {
-    const str = input.value.trim()
+    const str = input.value.trim();
     if (str.startsWith('"') && str.endsWith('"')) {
-      output.value = JSON.parse(str)
+      output.value = JSON.parse(str);
     } else {
-      output.value = JSON.parse(`"${str}"`)
+      output.value = JSON.parse(`"${str}"`);
     }
   } catch (e) {
-    output.value = '错误: ' + (e as Error).message
+    output.value = '错误: ' + (e as Error).message;
   }
 }
 
 function urlEncode() {
-  output.value = encodeURIComponent(input.value)
+  output.value = encodeURIComponent(input.value);
 }
 
 function urlDecode() {
   try {
-    output.value = decodeURIComponent(input.value)
+    output.value = decodeURIComponent(input.value);
   } catch (e) {
-    output.value = '错误: ' + (e as Error).message
+    output.value = '错误: ' + (e as Error).message;
   }
 }
 
 function clear() {
-  input.value = ''
-  output.value = ''
+  input.value = '';
+  output.value = '';
 }
 
 function copyOutput() {
-  copy(output.value)
+  copy(output.value);
 }
 
 function swap() {
-  input.value = output.value
-  output.value = ''
+  input.value = output.value;
+  output.value = '';
 }
 </script>
 

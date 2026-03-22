@@ -1,6 +1,6 @@
-import type { WatchSource } from 'vue'
+import type { WatchSource } from 'vue';
 
-import { onScopeDispose, watch } from 'vue'
+import { onScopeDispose, watch } from 'vue';
 
 /**
  * A composable that runs an animation step function when a condition is true, and stops it when the condition is false.
@@ -15,33 +15,33 @@ export function useAnimateWhenever(
   start: () => void,
   stop: () => void,
 ) {
-  let active = false
-  let animationFrame: number | null = null
+  let active = false;
+  let animationFrame: number | null = null;
 
   function callback(timestamp: number): void {
-    if (!active) return
-    step(timestamp)
+    if (!active) return;
+    step(timestamp);
     if (active) {
-      animationFrame = requestAnimationFrame(callback)
+      animationFrame = requestAnimationFrame(callback);
     }
   }
 
   function startAnimation(): void {
     if (!active) {
-      active = true
-      start()
-      animationFrame = requestAnimationFrame(callback)
+      active = true;
+      start();
+      animationFrame = requestAnimationFrame(callback);
     }
   }
 
   function stopAnimation(): void {
     if (active) {
-      active = false
+      active = false;
       if (animationFrame !== null) {
-        cancelAnimationFrame(animationFrame)
-        animationFrame = null
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
       }
-      stop()
+      stop();
     }
   }
 
@@ -49,15 +49,15 @@ export function useAnimateWhenever(
     condition,
     (value) => {
       if (value) {
-        startAnimation()
+        startAnimation();
       } else {
-        stopAnimation()
+        stopAnimation();
       }
     },
     { immediate: true },
-  )
+  );
 
   onScopeDispose(() => {
-    stopAnimation()
-  })
+    stopAnimation();
+  });
 }
