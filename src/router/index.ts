@@ -1,9 +1,9 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router';
 
-import ImageProcessing from '@/pages/ImageProcessing.vue'
-import Home from '@/pages/index.vue'
-import StringConverter from '@/pages/StringConverter.vue'
-import UnixTimestamp from '@/pages/UnixTimestamp.vue'
+import ImageProcessing from '@/pages/ImageProcessing.vue';
+import Home from '@/pages/index.vue';
+import StringConverter from '@/pages/StringConverter.vue';
+import UnixTimestamp from '@/pages/UnixTimestamp.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,6 +29,6 @@ const router = createRouter({
       component: StringConverter,
     },
   ],
-})
+});
 
-export default router
+export default router;

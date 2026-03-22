@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 const items = computed(() => [
   {
@@ -18,7 +18,7 @@ const items = computed(() => [
     label: '字符串转换',
     to: '/string-converter',
   },
-])
+]);
 </script>
 
 <template>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import ImagePreviewHelpMenu from '@/components/ImagePreviewHelpMenu.vue'
-import { useImagePreview } from '@/composables/useImagePreview'
-import { useTemplateRef } from 'vue'
+import ImagePreviewHelpMenu from '@/components/ImagePreviewHelpMenu.vue';
+import { useImagePreview } from '@/composables/useImagePreview';
+import { useTemplateRef } from 'vue';
 
-const overlayRef = useTemplateRef('overlayRef')
+const overlayRef = useTemplateRef('overlayRef');
 
 const {
   preview,
@@ -23,9 +23,9 @@ const {
   onMousemove,
   onMouseup,
   onKeydown,
-} = useImagePreview(overlayRef)
+} = useImagePreview(overlayRef);
 
-defineExpose({ open })
+defineExpose({ open });
 </script>
 
 <template>

@@ -1,15 +1,15 @@
 /** 图片缩放配置选项 */
 export interface UseImagePreviewScaleOptions {
   /** 最小缩放倍数 */
-  minScale?: number
+  minScale?: number;
   /** 最大缩放倍数 */
-  maxScale?: number
+  maxScale?: number;
   /** 对数底数 */
-  base?: number
+  base?: number;
   /** 乘数数组 */
-  coefficients?: number[]
+  coefficients?: number[];
   /** 滚轮缩放时的倍数 */
-  multiplier?: number
+  multiplier?: number;
 }
 
 /**
@@ -34,59 +34,59 @@ export function useImagePreviewScale(options: UseImagePreviewScaleOptions = {}) 
     base = 2,
     coefficients = [1, 1.25, 1.5],
     multiplier = 1.25,
-  } = options
+  } = options;
 
   /** 乘数数组正序和反序 */
-  const coefficientSorted = [...coefficients].sort((a, b) => a - b)
-  const coefficientReversed = [...coefficientSorted].reverse()
+  const coefficientSorted = [...coefficients].sort((a, b) => a - b);
+  const coefficientReversed = [...coefficientSorted].reverse();
 
   /** 将缩放倍数限制在允许的范围内 */
   function clampScale(value: number): number {
-    return Math.min(maxScale, Math.max(minScale, value))
+    return Math.min(maxScale, Math.max(minScale, value));
   }
 
   /** 获取下一个步进缩放倍数，即找到第一个大于当前值的缩放倍数 */
   function getNextScale(value: number): number {
-    const exponent = Math.floor(Math.log(value) / Math.log(base))
+    const exponent = Math.floor(Math.log(value) / Math.log(base));
 
     for (const exp of [exponent, exponent + 1]) {
-      const baseExp = base ** exp
+      const baseExp = base ** exp;
       for (const coefficient of coefficientSorted) {
-        const candidate = baseExp * coefficient
+        const candidate = baseExp * coefficient;
         if (candidate > value) {
-          return clampScale(candidate)
+          return clampScale(candidate);
         }
       }
     }
 
-    return maxScale
+    return maxScale;
   }
 
   /** 获取上一个步进缩放倍数，即找到第一个小于当前值的缩放倍数 */
   function getPrevScale(value: number): number {
-    const exponent = Math.floor(Math.log(value) / Math.log(base))
+    const exponent = Math.floor(Math.log(value) / Math.log(base));
 
     for (const exp of [exponent, exponent - 1]) {
-      const baseExp = base ** exp
+      const baseExp = base ** exp;
       for (const coefficient of coefficientReversed) {
-        const candidate = baseExp * coefficient
+        const candidate = baseExp * coefficient;
         if (candidate < value) {
-          return clampScale(candidate)
+          return clampScale(candidate);
         }
       }
     }
 
-    return minScale
+    return minScale;
   }
 
   /** 用倍数计算下一个缩放倍数，直接乘以 multiplier */
   function getNextScaleWithMultiplier(value: number): number {
-    return clampScale(value * multiplier)
+    return clampScale(value * multiplier);
   }
 
   /** 用倍数计算上一个缩放倍数，直接除以 multiplier */
   function getPrevScaleWithMultiplier(value: number): number {
-    return clampScale(value / multiplier)
+    return clampScale(value / multiplier);
   }
 
   return {
@@ -95,5 +95,5 @@ export function useImagePreviewScale(options: UseImagePreviewScaleOptions = {}) 
     getPrevScale,
     getNextScaleWithMultiplier,
     getPrevScaleWithMultiplier,
-  }
+  };
 }
