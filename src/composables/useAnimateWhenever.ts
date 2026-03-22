@@ -15,27 +15,35 @@ export function useAnimateWhenever(
   start: () => void,
   stop: () => void,
 ) {
+  let active = false
+  let animationFrame: number | null = null
+
   function callback(timestamp: number): void {
+    if (!active) return
     step(timestamp)
-    animationFrame = requestAnimationFrame(callback)
+    if (active) {
+      animationFrame = requestAnimationFrame(callback)
+    }
   }
 
   function startAnimation(): void {
-    if (animationFrame === null) {
+    if (!active) {
+      active = true
       start()
       animationFrame = requestAnimationFrame(callback)
     }
   }
 
   function stopAnimation(): void {
-    if (animationFrame !== null) {
-      cancelAnimationFrame(animationFrame)
-      animationFrame = null
+    if (active) {
+      active = false
+      if (animationFrame !== null) {
+        cancelAnimationFrame(animationFrame)
+        animationFrame = null
+      }
       stop()
     }
   }
-
-  let animationFrame: number | null = null
 
   watch(
     condition,
