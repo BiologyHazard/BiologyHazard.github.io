@@ -51,6 +51,8 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   const scale = ref<number>(1)
   /** 图像的初始缩放倍数（依据容器自动计算） */
   const initialScale = ref<number>(1)
+  /** 背景色，默认为黑色 92% 不透明度 */
+  const backgroundColor = ref<string>('rgba(0, 0, 0, 0.92)')
 
   /** 设备像素比，即 1 CSS 像素与 1 屏幕像素的比值 */
   const pixelRatio = useDevicePixelRatio().pixelRatio
@@ -413,6 +415,7 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   return {
     preview,
     scale,
+    backgroundColor,
     imgStyle,
     onImageLoad,
     open,

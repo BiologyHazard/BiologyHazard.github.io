@@ -8,6 +8,7 @@ const overlayRef = useTemplateRef('overlayRef')
 const {
   preview,
   scale,
+  backgroundColor,
   imgStyle,
   onImageLoad,
   open,
@@ -38,7 +39,8 @@ defineExpose({ open })
       <div
         v-if="preview"
         ref="overlayRef"
-        class="fixed inset-0 flex flex-col bg-black/92 outline-none"
+        class="fixed inset-0 flex flex-col outline-none"
+        :style="{ backgroundColor }"
         tabindex="0"
         @keydown="onKeydown"
         @mouseleave="onMouseup"
@@ -74,6 +76,15 @@ defineExpose({ open })
               />
             </UTooltip>
             <div class="mx-1 h-5 w-px bg-accented" />
+            <UPopover mode="click" :ui="{ content: 'p-4' }">
+              <UTooltip text="更改背景颜色">
+                <UButton color="neutral" icon="i-lucide-palette" variant="ghost" />
+              </UTooltip>
+              <template #content>
+                <UColorPicker v-model="backgroundColor" />
+                <UInput v-model="backgroundColor" class="mt-2" />
+              </template>
+            </UPopover>
             <UTooltip :kbds="['O']" text="在新标签页中打开图像">
               <UButton
                 color="neutral"
