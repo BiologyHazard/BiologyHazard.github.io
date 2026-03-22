@@ -36,8 +36,9 @@ export function useImagePreviewScale(options: UseImagePreviewScaleOptions = {}) 
     multiplier = 1.25,
   } = options
 
-  /** 乘数数组反序 */
-  const coefficientReversed = [...coefficients].reverse()
+  /** 乘数数组正序和反序 */
+  const coefficientSorted = [...coefficients].sort((a, b) => a - b)
+  const coefficientReversed = [...coefficientSorted].reverse()
 
   /** 将缩放倍数限制在允许的范围内 */
   function clampScale(value: number): number {
@@ -50,7 +51,7 @@ export function useImagePreviewScale(options: UseImagePreviewScaleOptions = {}) 
 
     for (const exp of [exponent, exponent + 1]) {
       const baseExp = base ** exp
-      for (const coefficient of coefficients) {
+      for (const coefficient of coefficientSorted) {
         const candidate = baseExp * coefficient
         if (candidate > value) {
           return clampScale(candidate)
