@@ -105,7 +105,12 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     return getZoomDirection() !== 0
   })
 
-  /** 获取平移方向，x 和 y 的值分别表示水平方向和垂直方向，-1 表示向左或向上，1 表示向右或向下，0 表示不移动 */
+  /**
+   * 获取图像平移方向，x 和 y 的值分别表示水平方向和垂直方向
+   * -1 表示向左或向上，1 表示向右或向下，0 表示不移动
+   * 注意图像平移方向和视图平移方向是相反的
+   * 例如按下 A 键时，视图向左移动，图像应该向右移动，因此按下 A 键时返回 { x: 1, y: 0 }
+   */
   function getPanDirection(): { x: number; y: number } {
     return {
       x: Number(keyA?.value || keyArrowLeft?.value) - Number(keyD?.value || keyArrowRight?.value),
