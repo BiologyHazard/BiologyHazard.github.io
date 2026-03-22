@@ -254,12 +254,50 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
   }
 
   /** 下载图像 */
-  function download(): void {
+  async function download(): Promise<void> {
     if (!preview.value) return
-    const anchor = document.createElement('a')
-    anchor.href = preview.value.url
-    anchor.download = preview.value.downloadName
-    anchor.click()
+    const { url, downloadName } = preview.value
+
+    function triggerDownload(href: string) {
+      const a = document.createElement('a')
+      a.href = href
+      a.download = downloadName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
+
+    // blob: / data: URL 可直接触发下载，无需重新 fetch
+    if (url.startsWith('blob:') || url.startsWith('data:')) {
+      triggerDownload(url)
+      return
+    }
+
+    // 同源 URL：直接设置 download 属性即可，浏览器会处理下载
+    const isSameOrigin = (() => {
+      try {
+        return new URL(url).origin === location.origin
+      } catch {
+        return true // 相对路径视为同源
+      }
+    })()
+
+    if (isSameOrigin) {
+      triggerDownload(url)
+      return
+    }
+
+    // 跨域：download 属性会被浏览器忽略，需 fetch 转为 blob URL 再触发
+    try {
+      const res = await fetch(url, { referrerPolicy: 'no-referrer' })
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      triggerDownload(objectUrl)
+      URL.revokeObjectURL(objectUrl)
+    } catch {
+      // fetch 失败时回退到新标签页打开
+      window.open(url, '_blank', 'noopener noreferrer')
+    }
   }
 
   /** 放大图像 */
