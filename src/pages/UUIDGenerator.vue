@@ -66,7 +66,7 @@ onMounted(() => {
             <UDivider />
 
             <div class="flex flex-col gap-2">
-              <UUIDRow v-for="(item, index) in formattedUUIDs" :key="index" :uuid="item" />
+              <UUIDRow v-for="item in formattedUUIDs" :key="item" :uuid="item" />
             </div>
 
             <UButton
