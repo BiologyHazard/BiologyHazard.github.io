@@ -4,6 +4,7 @@ import ImageProcessing from '@/pages/ImageProcessing.vue';
 import Home from '@/pages/index.vue';
 import StringConverter from '@/pages/StringConverter.vue';
 import UnixTimestamp from '@/pages/UnixTimestamp.vue';
+import UUIDGenerator from '@/pages/UUIDGenerator.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -27,6 +28,11 @@ const router = createRouter({
       path: '/string-converter',
       name: 'string-converter',
       component: StringConverter,
+    },
+    {
+      path: '/uuid-generator',
+      name: 'uuid-generator',
+      component: UUIDGenerator,
     },
   ],
 });

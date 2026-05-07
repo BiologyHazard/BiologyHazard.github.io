@@ -18,6 +18,10 @@ const items = computed(() => [
     label: '字符串转换',
     to: '/string-converter',
   },
+  {
+    label: 'UUID 生成',
+    to: '/uuid-generator',
+  },
 ]);
 </script>
 
