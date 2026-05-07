@@ -253,6 +253,8 @@ export function useImagePreview(overlayRef: Ref<HTMLElement | null>) {
     scale.value = 1;
     rotation.value = 0;
     offset.value = { x: 0, y: 0 };
+    naturalWidth.value = 0;
+    naturalHeight.value = 0;
   }
 
   /** 关闭图像预览 */
