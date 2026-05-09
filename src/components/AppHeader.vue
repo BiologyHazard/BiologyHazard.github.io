@@ -11,6 +11,10 @@ const items = computed(() => [
     to: '/image-processing',
   },
   {
+    label: '音频响度',
+    to: '/audio-loudness',
+  },
+  {
     label: '时间戳转换',
     to: '/unix-timestamp',
   },

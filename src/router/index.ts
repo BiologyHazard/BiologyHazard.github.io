@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
+import AudioLoudness from '@/pages/AudioLoudness.vue';
 import ImageProcessing from '@/pages/ImageProcessing.vue';
 import Home from '@/pages/index.vue';
 import StringConverter from '@/pages/StringConverter.vue';
@@ -18,6 +19,11 @@ const router = createRouter({
       path: '/image-processing',
       name: 'image-processing',
       component: ImageProcessing,
+    },
+    {
+      path: '/audio-loudness',
+      name: 'audio-loudness',
+      component: AudioLoudness,
     },
     {
       path: '/unix-timestamp',
