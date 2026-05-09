@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import * as ebur128 from 'ebur128-wasm';
+import { computed, ref } from 'vue';
 
 const tabItems = [
   { label: '人声', icon: 'i-lucide-mic', value: 'vocal', default: -16 },
@@ -8,10 +8,11 @@ const tabItems = [
   { label: '自定义', icon: 'i-lucide-settings-2', value: 'custom', default: undefined },
 ];
 
-const isAnalyzing = ref(false);
-const statusText = ref('');
-const integratedLoudness = ref(0);
-const truePeak = ref(0);
+const hasResult = ref<boolean>(false);
+const isAnalyzing = ref<boolean>(false);
+const statusText = ref<string | null>(null);
+const integratedLoudness = ref<number>(0);
+const truePeak = ref<number>(0);
 const error = ref<string | null>(null);
 const file = ref<File | null>(null);
 
@@ -29,16 +30,17 @@ function onPresetChange(newValue: string | number) {
 const suggestedGain = computed(() => targetLoudness.value - integratedLoudness.value);
 
 async function analyzeAudio(file: File) {
+  hasResult.value = false;
   isAnalyzing.value = true;
   statusText.value = '准备分析...';
   integratedLoudness.value = 0;
   truePeak.value = 0;
   error.value = null;
 
-  try {
-    // 1. 获取 AudioContext
-    const audioContext = new window.AudioContext();
+  // 1. 获取 AudioContext
+  const audioContext = new window.AudioContext();
 
+  try {
     // 2. 解码音频
     statusText.value = '正在解析音频数据...';
     const arrayBuffer = await file.arrayBuffer();
@@ -47,11 +49,6 @@ async function analyzeAudio(file: File) {
     const channels = audioBuffer.numberOfChannels;
     const sampleRate = audioBuffer.sampleRate;
 
-    // 3. 严格限制通道数
-    if (channels > 2) {
-      throw new Error(`暂不支持 ${channels} 通道音频，仅支持单声道或立体声。`);
-    }
-
     // 4. 调用 WASM 函数
     statusText.value = '正在计算整体响度 (LUFS)...';
     if (channels === 1) {
@@ -59,20 +56,23 @@ async function analyzeAudio(file: File) {
       integratedLoudness.value = ebur128.ebur128_integrated_mono(sampleRate, data);
       statusText.value = '正在计算真峰值 (dBTP)...';
       truePeak.value = ebur128.ebur128_true_peak_mono(sampleRate, data);
-    } else {
+    } else if (channels === 2) {
       const left = audioBuffer.getChannelData(0);
       const right = audioBuffer.getChannelData(1);
       integratedLoudness.value = ebur128.ebur128_integrated_stereo(sampleRate, left, right);
       statusText.value = '正在计算真峰值 (dBTP)...';
       truePeak.value = ebur128.ebur128_true_peak_stereo(sampleRate, left, right);
+    } else {
+      throw new Error(`暂不支持 ${channels} 通道音频，仅支持单声道或立体声。`);
     }
 
-    await audioContext.close();
     statusText.value = '分析完成';
-  } catch (err: unknown) {
-    console.error('Audio analysis failed:', err);
+    hasResult.value = true;
+  } catch (err) {
+    console.error('Audio analysis failed: ', err);
     error.value = err instanceof Error ? err.message : '音频分析失败，请检查文件格式。';
   } finally {
+    await audioContext.close();
     isAnalyzing.value = false;
   }
 }
@@ -80,6 +80,12 @@ async function analyzeAudio(file: File) {
 function watchFile(newFile: File | null | undefined) {
   if (newFile) {
     analyzeAudio(newFile);
+  } else {
+    hasResult.value = false;
+    statusText.value = null;
+    integratedLoudness.value = 0;
+    truePeak.value = 0;
+    error.value = null;
   }
 }
 </script>
@@ -114,7 +120,7 @@ function watchFile(newFile: File | null | undefined) {
             v-model="file"
             accept="audio/*"
             class="w-full"
-            description="支持 WAV, MP3, FLAC 等格式"
+            description="音频处理在浏览器本地进行，文件不会被上传到服务器。"
             icon="i-lucide-music"
             label="选择音频文件"
             layout="list"
@@ -141,7 +147,7 @@ function watchFile(newFile: File | null | undefined) {
 
         <!-- 右侧结果展示 -->
         <div>
-          <UCard v-if="integratedLoudness !== 0 || truePeak !== 0" class="h-full">
+          <UCard v-if="hasResult" class="h-full">
             <div class="space-y-10">
               <div class="border-l-2 border-muted pl-3">
                 <p class="mb-1 text-xs font-semibold text-muted">整体响度 (Integrated)</p>
