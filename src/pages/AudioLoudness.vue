@@ -29,6 +29,7 @@ function onPresetChange(newValue: string | number) {
 
 const suggestedGain = computed(() => targetLoudness.value - integratedLoudness.value);
 
+// TODO: analyzeAudio can be invoked multiple times (e.g. user selects a new file while a previous analysis is still running). Because there’s no cancellation / “latest run” guard, a slower earlier run can overwrite integratedLoudness/truePeak/statusText/hasResult, and isAnalyzing can be set to false even though a newer run is still in progress. Consider tracking a monotonically increasing run id (or storing the current Promise) and only committing results / flipping isAnalyzing for the latest run, or disabling file changes while analyzing and explicitly cancelling/closing the previous context.
 async function analyzeAudio(file: File) {
   hasResult.value = false;
   isAnalyzing.value = true;
