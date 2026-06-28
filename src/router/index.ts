@@ -40,6 +40,11 @@ const router = createRouter({
       name: 'uuid-generator',
       component: UUIDGenerator,
     },
+    {
+      path: '/test',
+      name: 'test',
+      component: () => import('@/pages/SuperEllipse.vue'),
+    },
   ],
 });
 
